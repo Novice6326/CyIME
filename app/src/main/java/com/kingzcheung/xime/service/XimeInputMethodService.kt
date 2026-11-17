@@ -4508,6 +4508,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         EnterKeyAction.label(editorInfo.imeOptions, appSend = SettingsPreferences.isEnterSendsEnabled(this))
 
     override fun onFinishInput() {
+        // Losing editor focus must never leave a paced paste writing into a different app or field.
+        sequentialInputController.stop()
+        sequentialInputMode = false
         gameShowExplicit = false
         suspendCompositionForScreenOff()
         endGlidePreview()
@@ -5166,6 +5169,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     }
 
     override fun onDestroy() {
+        // Cancel any pending Handler tick before this service and its InputConnection are torn down.
+        sequentialInputController.stop()
+        sequentialInputMode = false
         runCatching {
             (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager)
                 .removePrimaryClipChangedListener(sequentialClipboardChangeListener)
