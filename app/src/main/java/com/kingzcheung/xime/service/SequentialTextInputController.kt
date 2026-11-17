@@ -3,6 +3,7 @@ package com.kingzcheung.xime.service
 import android.os.Handler
 import android.os.Looper
 import android.view.inputmethod.InputConnection
+import kotlin.random.Random
 import androidx.annotation.MainThread
 
 /**
@@ -14,7 +15,8 @@ import androidx.annotation.MainThread
 @MainThread
 internal class SequentialTextInputController(
     private val inputConnection: () -> InputConnection?,
-    private val intervalMs: Long = DEFAULT_INTERVAL_MS,
+    private val intervalMs: () -> Long = { DEFAULT_INTERVAL_MS },
+    private val punctuationPauseMs: () -> Long = { DEFAULT_PUNCTUATION_PAUSE_MS },
     private val onProgress: (committed: Int, total: Int, running: Boolean) -> Unit = { _, _, _ -> },
     private val onFinished: (success: Boolean) -> Unit = {},
 ) {
@@ -49,7 +51,14 @@ internal class SequentialTextInputController(
             if (nextIndex >= codePoints.size) {
                 finish(true)
             } else {
-                handler.postDelayed(this, intervalMs.coerceAtLeast(20L))
+                val base = intervalMs().coerceIn(MIN_INTERVAL_MS, MAX_INTERVAL_MS)
+                // Small natural variation avoids a perfectly mechanical cadence.
+                val lower = (base * 0.8).toLong().coerceAtLeast(MIN_INTERVAL_MS)
+                val upper = (base * 1.2).toLong().coerceAtLeast(lower + 1L)
+                val punctuationPause = if (isPausePunctuation(codePoints[nextIndex - 1])) {
+                    punctuationPauseMs().coerceIn(0L, MAX_PUNCTUATION_PAUSE_MS)
+                } else 0L
+                handler.postDelayed(this, Random.nextLong(lower, upper + 1L) + punctuationPause)
             }
         }
     }
@@ -119,5 +128,16 @@ internal class SequentialTextInputController(
 
     companion object {
         const val DEFAULT_INTERVAL_MS = 120L
+        const val DEFAULT_PUNCTUATION_PAUSE_MS = 350L
+        private const val MIN_INTERVAL_MS = 20L
+        private const val MAX_INTERVAL_MS = 5_000L
+        private const val MAX_PUNCTUATION_PAUSE_MS = 5_000L
+
+        private fun isPausePunctuation(codePoint: Int): Boolean =
+            codePoint == '\n'.code ||
+                codePoint in intArrayOf(
+                    '，'.code, '。'.code, '！'.code, '？'.code, '；'.code, '：'.code, '、'.code,
+                    ','.code, '.'.code, '!'.code, '?'.code, ';'.code, ':'.code,
+                )
     }
 }
