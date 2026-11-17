@@ -1133,6 +1133,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
 
     override fun onCreate() {
         super.onCreate()
+        // A new system clipboard copy pauses the current paced-input task without replacing its snapshot.
+        (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager)
+            .addPrimaryClipChangedListener(sequentialClipboardChangeListener)
         if (BuildConfig.DEV_TOOLS) EnterProbe.service = java.lang.ref.WeakReference(this)
         com.kingzcheung.xime.stats.TypingStats.init(this)
         com.kingzcheung.xime.ui.keyboard.HandwritingGlassRegion.reporter = handwritingGlassRegionReporter
@@ -3361,6 +3364,18 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             },
         )
     }
+    /** Pause the current task when the system clipboard changes; never replace its saved source text. */
+    private val sequentialClipboardChangeListener =
+        android.content.ClipboardManager.OnPrimaryClipChangedListener {
+            if (sequentialInputController.isRunning) {
+                sequentialInputController.pause()
+                android.widget.Toast.makeText(
+                    this,
+                    "检测到剪贴板内容变化，逐字输入已自动暂停；点击「逐字」可从原文断点继续",
+                    android.widget.Toast.LENGTH_LONG,
+                ).show()
+            }
+        }
     private val clipboardKeyboard = com.kingzcheung.xime.clipboard.ClipboardKeyboardNavigation {
         keyboardViewModel.leaveClipboard()
         if (clipboardRestoreCompact) collapseScreenKeyboardToHardwareToolbar()
@@ -5133,6 +5148,10 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     }
 
     override fun onDestroy() {
+        runCatching {
+            (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager)
+                .removePrimaryClipChangedListener(sequentialClipboardChangeListener)
+        }
         if (EnterProbe.service?.get() === this) EnterProbe.service = null
         if (rimeEngine.onSchemaSwitched === schemaSwitchPrefetch) rimeEngine.onSchemaSwitched = null
         KeyboardPanelLaunch.previewVisible = false
