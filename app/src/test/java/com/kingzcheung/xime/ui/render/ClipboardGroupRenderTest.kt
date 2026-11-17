@@ -75,8 +75,11 @@ class ClipboardGroupRenderTest {
 
     @Test fun dragGroupAheadOfTextThenRenameAndDeleteByButton() {
         val store = ClipboardGroupStore.getInstance(rule.activity)
-        store.add("收藏", listOf("text:7"))
-        val id = store.state.value.groups.single().id
+        // This singleton persists through the Robolectric process; isolate this test from prior runs.
+        store.state.value.groups.toList().forEach { store.delete(it.id) }
+        store.setTabOrder(emptyList())
+        assertEquals(null, store.add("收藏", listOf("text:7")))
+        val id = store.state.value.groups.single { it.name == "收藏" }.id
         rule.setContent { XimeTheme(darkTheme = true) { ClipboardGroupSettingsContent(onBack = {}) } }
         val from = rule.onNodeWithTag("clipboard-order:group:$id").fetchSemanticsNode().boundsInRoot.center
         val to = rule.onNodeWithTag("clipboard-order:TEXT").fetchSemanticsNode().boundsInRoot.center

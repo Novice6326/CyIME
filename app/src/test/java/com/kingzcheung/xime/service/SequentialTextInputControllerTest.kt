@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit
 
 @RunWith(RobolectricTestRunner::class)
 @LooperMode(LooperMode.Mode.PAUSED)
-@Config(sdk = [35])
+@Config(sdk = [35], application = android.app.Application::class)
 class SequentialTextInputControllerTest {
     private fun controller(
         connection: InputConnection,

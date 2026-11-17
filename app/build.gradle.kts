@@ -414,3 +414,11 @@ dependencies {
         }
     }
 }
+
+
+// Keep the large Robolectric/Compose suite from exhausting the default 512 MiB test worker.
+// Periodically restart the worker so native graphics and Android test resources are reclaimed.
+tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+    maxHeapSize = "2g"
+    forkEvery = 40
+}
