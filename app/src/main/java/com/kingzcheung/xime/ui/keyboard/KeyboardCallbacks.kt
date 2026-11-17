@@ -96,6 +96,10 @@ data class KeyboardCallbacks(
     val onClipboard: (() -> Unit)? = null,
     val onDismissClipboardPreview: (() -> Unit)? = null,
     val onClipboardSelect: ((String) -> Unit)? = null,
+    /** Whether clipboard selection currently starts paced, character-by-character input. */
+    val sequentialInputActive: Boolean = false,
+    val onSequentialInputAction: (() -> Unit)? = null,
+    val onSequentialInputStop: (() -> Unit)? = null,
     /** A clipboard record (text or picture) was put into the text from the clipboard board. */
     val onClipboardRecordCommitted: (() -> Unit)? = null,
     val onClipboardImageSelect: ((com.kingzcheung.xime.clipboard.ClipboardImage) -> Unit)? = null,
