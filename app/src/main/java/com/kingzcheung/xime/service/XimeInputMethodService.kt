@@ -3347,7 +3347,10 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     private val glossShiftKeys = mutableSetOf<Int>()
     /** 实体键盘 Ctrl+回车、Shift+回车按下时已处理，抬起也不再交给应用。 */
     private val ctrlEnterKeys = mutableSetOf<Int>()
-    internal var sequentialInputMode: Boolean = false
+    internal val sequentialInputModeState = androidx.compose.runtime.mutableStateOf(false)
+    internal var sequentialInputMode: Boolean
+        get() = sequentialInputModeState.value
+        set(value) { sequentialInputModeState.value = value }
     internal val sequentialInputController: SequentialTextInputController by lazy {
         SequentialTextInputController(
             inputConnection = { currentInputConnection },
