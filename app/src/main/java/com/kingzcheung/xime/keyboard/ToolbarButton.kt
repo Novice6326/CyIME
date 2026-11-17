@@ -34,6 +34,7 @@ enum class ToolbarButton(
 ) {
     EMOJI("emoji", "表情", Icons.TwoTone.EmojiEmotions),
     CLIPBOARD("clipboard", "剪贴板", Icons.AutoMirrored.TwoTone.Assignment),
+    SEQUENTIAL_INPUT("sequential_input", "逐字", Icons.TwoTone.LastPage),
     OCR("ocr", "拍照识别", Icons.Default.DocumentScanner),
     SCHEMA("schema", "输入方式", Icons.TwoTone.KeyboardAlt),
     SYMBOL("symbol", "符号", Icons.TwoTone.Paid),
@@ -66,7 +67,7 @@ enum class ToolbarButton(
 
     companion object {
         // 仅在用户还没有保存工具栏偏好时使用，保留已有选择及顺序。
-        val DEFAULT_VISIBLE = linkedSetOf(SCHEMA, EMOJI, EDIT, CLIPBOARD, HANDWRITING_LOOKUP, VOICE)
+        val DEFAULT_VISIBLE = linkedSetOf(SCHEMA, EMOJI, EDIT, CLIPBOARD, SEQUENTIAL_INPUT, HANDWRITING_LOOKUP, VOICE)
 
         /** 菜单默认一页 8 项（另加末尾的“排列”）：只放打字时会临时调整的入口，其余可在“排列”中加入。 */
         // 字幕不在这份清单里：它是「字幕」插件的按钮，插件装上并启用时才放进菜单（CaptionPlugin）。
