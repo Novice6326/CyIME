@@ -132,7 +132,27 @@ jobs:
       - name: Build Full ARM64 Release APK (unsigned)
         run: ./gradlew assembleRelease -PbundleModels=true -Parm64Only=true -PpythonExecutable=python3 -Pcyime.translateLibDir=tools/offline_translate/work/out --stacktrace --info --console=plain --build-cache --parallel
 
+      - name: Validate release signing secrets
+        if: github.event_name != 'pull_request'
+        shell: bash
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          ALIAS: ${{ secrets.ALIAS }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          missing=()
+          [[ -n "$SIGNING_KEY" ]] || missing+=("SIGNING_KEY")
+          [[ -n "$ALIAS" ]] || missing+=("ALIAS")
+          [[ -n "$KEY_STORE_PASSWORD" ]] || missing+=("KEY_STORE_PASSWORD")
+          [[ -n "$KEY_PASSWORD" ]] || missing+=("KEY_PASSWORD")
+          if (( ${#missing[@]} )); then
+            printf '::error::Release signing secrets are missing or empty: %s\\n' "${missing[*]}"
+            exit 1
+          fi
+
       - name: Sign Main App APKs
+        if: github.event_name != 'pull_request'
         uses: r0adkll/sign-android-release@v1
         id: sign_main_app
         with:
@@ -145,6 +165,7 @@ jobs:
           BUILD_TOOLS_VERSION: "36.0.0"
 
       - name: Verify APK signatures
+        if: github.event_name != 'pull_request'
         run: |
           APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | tail -1)
           for apk in app/build/outputs/apk/release/CyIME-*.apk; do
@@ -155,9 +176,11 @@ jobs:
           done
 
       - name: Build Plugin XIPKs
+        if: github.event_name != 'pull_request'
         run: bash scripts/build-plugins.sh
 
       - name: Upload Full ARM64 APK and plugins
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v7
         with:
           name: full-arm64-apk
