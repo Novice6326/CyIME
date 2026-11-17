@@ -4548,6 +4548,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
+        // Never continue committing clipboard characters after the keyboard is hidden.
+        // Keep the immutable source and checkpoint so the user can resume from the toolbar.
+        sequentialInputController.pause()
         gameShowExplicit = false
         suspendCompositionForScreenOff()
         KeyboardPanelLaunch.previewVisible = false
