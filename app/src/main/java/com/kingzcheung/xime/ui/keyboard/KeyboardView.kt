@@ -1121,6 +1121,14 @@ fun KeyboardView(
                 .fillMaxSize()
                 .then(if (onPreviewArrangePositioned != null) Modifier.clearAndSetSemantics {} else Modifier)
         ) {
+            callbacks.sequentialInputProgress?.value?.takeIf { it.isNotBlank() }?.let { progressText ->
+                androidx.compose.material.Text(
+                    text = progressText,
+                    color = Color.Gray,
+                    fontSize = 11.sp,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 3.dp),
+                )
+            }
             var handwritingCandidates by remember(state.inputSessionId, state.inputProfile.language) { mutableStateOf<List<String>>(emptyList()) }
             var handwritingClearSignal by remember(state.inputSessionId, state.inputProfile.language) { mutableIntStateOf(0) }
             val handwritingPending = remember(state.inputSessionId, state.inputProfile.language) { HandwritingCandidateQueue() }
