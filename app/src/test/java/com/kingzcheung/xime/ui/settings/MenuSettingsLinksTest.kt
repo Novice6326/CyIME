@@ -23,6 +23,7 @@ class MenuSettingsLinksTest {
     @Test fun onlyActionsAndTransientStatesHaveNoSetting() {
         val noSetting = setOf(
             ToolbarButton.EDIT, ToolbarButton.FULL_SHAPE, ToolbarButton.SETTINGS, ToolbarButton.EMOJI, ToolbarButton.SYMBOL,
+            ToolbarButton.SEQUENTIAL_INPUT,
         )
         assertEquals(ToolbarButton.entries.toSet() - noSetting, MenuSettingsTitles.keys)
         for (b in noSetting) assertNull(b.id, menuSettingsEntry(ToolbarButtonItem.Builtin(b)))
