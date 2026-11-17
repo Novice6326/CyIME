@@ -3347,6 +3347,17 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     private val glossShiftKeys = mutableSetOf<Int>()
     /** 实体键盘 Ctrl+回车、Shift+回车按下时已处理，抬起也不再交给应用。 */
     private val ctrlEnterKeys = mutableSetOf<Int>()
+    internal var sequentialInputMode: Boolean = false
+    internal val sequentialInputController: SequentialTextInputController by lazy {
+        SequentialTextInputController(
+            inputConnection = { currentInputConnection },
+            onFinished = { success ->
+                android.widget.Toast.makeText(this,
+                    if (success) "逐字输入完成" else "逐字输入已中断",
+                    android.widget.Toast.LENGTH_SHORT).show()
+            },
+        )
+    }
     private val clipboardKeyboard = com.kingzcheung.xime.clipboard.ClipboardKeyboardNavigation {
         keyboardViewModel.leaveClipboard()
         if (clipboardRestoreCompact) collapseScreenKeyboardToHardwareToolbar()
