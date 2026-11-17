@@ -34,7 +34,8 @@ internal enum class InputExperiencePart { SYMBOLS, DELETE, FLICK_DISC, KANA, CUR
 
 /** 「时长与距离」里的几项（设置搜索点中其中一项时自动展开，见 [InputExperienceSettings] 的 collapsedSummary）。 */
 internal val TIMING_SEARCH_KEYS = setOf("长按空格多久开始", "从中间滑到边缘走几行", "光标每移动一字所需距离",
-    "长按语言键弹出列表", "长按语言键切换输入法", "符号键松手打开符号的时限", "时长与距离")
+    "长按语言键弹出列表", "长按语言键切换输入法", "符号键松手打开符号的时限",
+    "逐字输入速度", "逐字输入标点停顿", "时长与距离")
 
 @Composable
 internal fun InputExperienceSettings(
@@ -396,6 +397,30 @@ internal fun InputExperienceSettings(
             }
             if (InputExperiencePart.TIMING in parts) {
             divider()
+            var sequentialInterval by remember(context) {
+                mutableFloatStateOf(SettingsPreferences.getSequentialInputIntervalMs(context).toFloat())
+            }
+            Column(Modifier.settingsSearchAnchor("逐字输入速度", bleed = 16.dp, bleedVertical = 6.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("逐字输入速度：${sequentialInterval.toInt()} 毫秒/字")
+                Text("数值越小越快；实际间隔会随机浮动约 20%。默认 120 毫秒。", style = MaterialTheme.typography.bodySmall)
+                Slider(value = sequentialInterval, modifier = Modifier.testTag("sequential-input-interval"),
+                    onValueChange = { sequentialInterval = (kotlin.math.round(it / 20f) * 20f).coerceIn(40f, 1_000f) },
+                    onValueChangeFinished = { SettingsPreferences.setSequentialInputIntervalMs(context, sequentialInterval.toLong()) },
+                    valueRange = 40f..1_000f, steps = 47)
+            }
+            var sequentialPunctuationPause by remember(context) {
+                mutableFloatStateOf(SettingsPreferences.getSequentialInputPunctuationPauseMs(context).toFloat())
+            }
+            Column(Modifier.settingsSearchAnchor("逐字输入标点停顿", bleed = 16.dp, bleedVertical = 6.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("逐字输入标点停顿：${sequentialPunctuationPause.toInt()} 毫秒")
+                Text("遇到逗号、句号、问号、换行等标点后额外停顿。默认 350 毫秒。", style = MaterialTheme.typography.bodySmall)
+                Slider(value = sequentialPunctuationPause, modifier = Modifier.testTag("sequential-input-punctuation-pause"),
+                    onValueChange = { sequentialPunctuationPause = (kotlin.math.round(it / 50f) * 50f).coerceIn(0f, 2_000f) },
+                    onValueChangeFinished = { SettingsPreferences.setSequentialInputPunctuationPauseMs(context, sequentialPunctuationPause.toLong()) },
+                    valueRange = 0f..2_000f, steps = 39)
+            }
             // 触发时长跟着空格当前的长按功能放，标题写明它控制的是哪个功能。
             @Composable fun spaceHoldSlider() {
                 val actionText = when (settings.effectiveSpaceHold) {
