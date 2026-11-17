@@ -91,11 +91,11 @@ class ClipboardGroupRenderTest {
         }
         rule.waitForIdle()
         assertEquals(listOf("ALL", "group:$id", "TEXT"), clipboardTabs(store.state.value).take(3).map { it.key })
+        assertEquals("重排后成员仍属于该分组", id, store.state.value.members["text:7"])
         rule.onNodeWithContentDescription("改名").performClick()
         rule.onNodeWithTag("clipboard-group-name").performTextReplacement("常用")
         rule.onNodeWithTag("clipboard-group-name-save").performClick()
         assertEquals("常用", clipboardTabs(store.state.value)[1].label)
-        assertEquals(id, store.state.value.members["text:7"])
         rule.onNodeWithContentDescription("删除").performClick()
         rule.onNodeWithText("取消").performClick()
         assertEquals(id, store.state.value.groups.single().id)
