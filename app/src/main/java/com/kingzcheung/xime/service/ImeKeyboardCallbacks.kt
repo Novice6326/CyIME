@@ -225,8 +225,16 @@ internal fun rememberImeKeyboardCallbacks(
                 android.widget.Toast.makeText(service, "逐字输入已停止", android.widget.Toast.LENGTH_SHORT).show()
             },
             onClipboardSelect = { text ->
-                if (service.sequentialInputMode) service.sequentialInputController.start(text)
-                else service.textCommit.selectClipboardItem(text)
+                when {
+                    service.sequentialInputController.isRunning || service.sequentialInputController.isPaused -> {
+                        // Keep the active task's immutable source and progress; the new clip is for the next task.
+                        android.widget.Toast.makeText(service,
+                            "当前逐字任务尚未结束，请先继续或停止；新复制内容会留作下一次输入",
+                            android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                    service.sequentialInputMode -> service.sequentialInputController.start(text)
+                    else -> service.textCommit.selectClipboardItem(text)
+                }
             },
             onClipboardRecordCommitted = { service.feedbackManager.playClipboardCommitSound() },
             onClipboardImageSelect = { image ->
