@@ -151,18 +151,48 @@ jobs:
             exit 1
           fi
 
+      - name: Decode and validate release signing keystore
+        if: github.event_name != 'pull_request'
+        shell: bash
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          ALIAS: ${{ secrets.ALIAS }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KS="$RUNNER_TEMP/cyime-release.jks"
+          printf '%s' "$SIGNING_KEY" | tr -d '[:space:]' | base64 --decode > "$KS"
+          test -s "$KS"
+          if keytool -list -keystore "$KS" -storetype JKS -storepass "$KEY_STORE_PASSWORD" -alias "$ALIAS" >/dev/null 2>&1; then
+            echo "CYIME_KEYSTORE_TYPE=JKS" >> "$GITHUB_ENV"
+          elif keytool -list -keystore "$KS" -storetype PKCS12 -storepass "$KEY_STORE_PASSWORD" -alias "$ALIAS" >/dev/null 2>&1; then
+            echo "CYIME_KEYSTORE_TYPE=PKCS12" >> "$GITHUB_ENV"
+          else
+            echo "::error::Decoded signing keystore is invalid, password is incorrect, or alias is missing."
+            exit 1
+          fi
+          echo "CYIME_KEYSTORE_PATH=$KS" >> "$GITHUB_ENV"
+          echo "Release keystore decoded and validated."
+
       - name: Sign Main App APKs
         if: github.event_name != 'pull_request'
-        uses: r0adkll/sign-android-release@v1
-        id: sign_main_app
-        with:
-          releaseDirectory: app/build/outputs/apk/release
-          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-          alias: ${{ secrets.ALIAS }}
-          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
+        shell: bash
         env:
-          BUILD_TOOLS_VERSION: "36.0.0"
+          ALIAS: ${{ secrets.ALIAS }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
+          shopt -s nullglob
+          apks=(app/build/outputs/apk/release/CyIME-*.apk)
+          (("${#apks[@]}" > 0)) || { echo "::error::No release APKs found"; exit 1; }
+          for apk in "${apks[@]}"; do
+            tmp="${apk%.apk}-signed.tmp.apk"
+            "$APKSIGNER" sign --ks "$CYIME_KEYSTORE_PATH" --ks-type "$CYIME_KEYSTORE_TYPE" --ks-key-alias "$ALIAS" --ks-pass "pass:$KEY_STORE_PASSWORD" --key-pass "pass:$KEY_PASSWORD" --out "$tmp" "$apk"
+            mv "$tmp" "$apk"
+            echo "Signed: $(basename "$apk")"
+          done
 
       - name: Verify APK signatures
         if: github.event_name != 'pull_request'
