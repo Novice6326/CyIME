@@ -58,4 +58,12 @@ class ClipboardGroupCreateFromRecordTest {
         store.setAddTarget(null)
         assertNull("from 全部: a fixed record", store.addTargetGroup())
     }
+    @Test fun membershipSurvivesTabReorderAndRename() {
+        assertNull(store.add("收藏", listOf("text:7")))
+        val id = group("收藏").id
+        store.setTabOrder(listOf("group:$id", "TEXT"))
+        assertEquals(id, store.state.value.members["text:7"])
+        assertNull(store.rename(id, "常用"))
+        assertEquals(id, store.state.value.members["text:7"])
+    }
 }
