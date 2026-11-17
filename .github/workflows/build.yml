@@ -112,16 +112,6 @@ jobs:
       - name: Download native deps (ONNX Runtime)
         run: ./gradlew downloadOnnx --build-cache --console=plain
 
-      - name: Setup signing keystore
-        run: |
-          cat > app/keystore.properties <<'EOF'
-          keyBase64=${{ secrets.SIGNING_KEY }}
-          storePassword=${{ secrets.KEY_STORE_PASSWORD }}
-          keyAlias=${{ secrets.ALIAS }}
-          keyPassword=${{ secrets.KEY_PASSWORD }}
-          EOF
-
-
       - name: Cache CMake build
         uses: actions/cache@v6
         with:
@@ -139,8 +129,20 @@ jobs:
           echo "CYIME_TRANSLATE_LIB_SHA256_ARM64=$(sha256sum tools/offline_translate/work/out/arm64-v8a/libcytranslate.so | cut -d' ' -f1)" >> "$GITHUB_ENV"
           echo "CYIME_TRANSLATE_LIB_SHA256_X86_64=$(sha256sum tools/offline_translate/work/out/x86_64/libcytranslate.so | cut -d' ' -f1)" >> "$GITHUB_ENV"
 
-      - name: Build Full ARM64 Signed Release APK
+      - name: Build Full ARM64 Release APK (unsigned)
         run: ./gradlew assembleRelease -PbundleModels=true -Parm64Only=true -PpythonExecutable=python3 -Pcyime.translateLibDir=tools/offline_translate/work/out --stacktrace --info --console=plain --build-cache --parallel
+
+      - name: Sign Main App APKs
+        uses: r0adkll/sign-android-release@v1
+        id: sign_main_app
+        with:
+          releaseDirectory: app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+        env:
+          BUILD_TOOLS_VERSION: "36.0.0"
 
       - name: Verify APK signatures
         run: |
