@@ -3787,6 +3787,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
 
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         endGlidePreview()
+        // Never let a paced paste continue into a different editor after focus changes.
+        sequentialInputController.stop()
+        sequentialInputMode = false
         super.onStartInput(attribute, restarting)
         editorStartedAt = android.os.SystemClock.uptimeMillis()
         val preview = KeyboardPanelLaunch.isPreview(attribute, packageName)
