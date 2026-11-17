@@ -99,11 +99,17 @@ jobs:
           name: release-layout-gate
           path: app/build/outputs/androidTest-results/connected/
 
+      - name: Build offline translation native libraries
+        run: |
+          bash tools/offline_translate/build-android.sh
+          echo "CYIME_TRANSLATE_LIB_SHA256_ARM64=$(sha256sum tools/offline_translate/work/out/arm64-v8a/libcytranslate.so | cut -d' ' -f1)" >> "$GITHUB_ENV"
+          echo "CYIME_TRANSLATE_LIB_SHA256_X86_64=$(sha256sum tools/offline_translate/work/out/x86_64/libcytranslate.so | cut -d' ' -f1)" >> "$GITHUB_ENV"
+
       - name: Build Release APKs (Signed)
         # A failed geometry test aborts this job before any release asset is built/uploaded.
         if: success()
         run: |
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew assembleRelease -Pcyime.translateLibDir=tools/offline_translate/work/out --no-daemon
           mkdir -p app/build/outputs/apk/distribution
           cp app/build/outputs/apk/release/CyIME-*.apk app/build/outputs/apk/distribution/
 
@@ -117,7 +123,7 @@ jobs:
 
       - name: Build offline Release APKs
         run: |
-          ./gradlew assembleRelease -PbundleModels=true -PpythonExecutable=python3 --no-daemon
+          ./gradlew assembleRelease -PbundleModels=true -PpythonExecutable=python3 -Pcyime.translateLibDir=tools/offline_translate/work/out --no-daemon
           cp app/build/outputs/apk/release/CyIME-*-full-*.apk app/build/outputs/apk/distribution/
 
       - name: Build Plugin XIPKs (Unsigned)
