@@ -3360,6 +3360,15 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             inputConnection = { currentInputConnection },
             intervalMs = { SettingsPreferences.getSequentialInputIntervalMs(this) },
             punctuationPauseMs = { SettingsPreferences.getSequentialInputPunctuationPauseMs(this) },
+            onProgress = { committed, total, running ->
+                sequentialInputProgressState.value = when {
+                    total <= 0 -> ""
+                    running -> "逐字输入中 · $committed/$total"
+                    sequentialInputController.isPaused -> "逐字输入已暂停 · $committed/$total"
+                    committed >= total -> "逐字输入完成 · $committed/$total"
+                    else -> "逐字输入已中断 · $committed/$total"
+                }
+            },
             onFinished = { success ->
                 android.widget.Toast.makeText(this,
                     if (success) "逐字输入完成" else "逐字输入已中断",
