@@ -8,6 +8,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+concurrency:
+  group: cyime-build-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   checks: write
