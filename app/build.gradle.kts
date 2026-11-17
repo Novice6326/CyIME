@@ -112,7 +112,9 @@ android {
 
         // NDK 配置
         ndk {
-            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+            val arm64Only = providers.gradleProperty("arm64Only").orNull == "true"
+            abiFilters += if (arm64Only) listOf("arm64-v8a")
+                else listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
         }
 
         // 构建信息
@@ -267,10 +269,12 @@ android {
     // 分架构打包
     splits {
         abi {
+            val arm64Only = providers.gradleProperty("arm64Only").orNull == "true"
             isEnable = true
             reset()
-            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
-            isUniversalApk = true
+            if (arm64Only) include("arm64-v8a")
+            else include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+            isUniversalApk = !arm64Only
         }
     }
 }
