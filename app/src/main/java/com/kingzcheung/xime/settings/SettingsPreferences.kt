@@ -5,6 +5,18 @@ import android.content.SharedPreferences
 import com.kingzcheung.xime.plugin.core.runtime.PluginManager
 
 object SettingsPreferences {
+    const val KEY_SEQUENTIAL_INPUT_INTERVAL_MS = "sequential_input_interval_ms"
+    const val KEY_SEQUENTIAL_INPUT_PUNCTUATION_PAUSE_MS = "sequential_input_punctuation_pause_ms"
+    fun getSequentialInputIntervalMs(context: Context): Long =
+        getPrefs(context).getLong(KEY_SEQUENTIAL_INPUT_INTERVAL_MS, 120L).coerceIn(20L, 5_000L)
+    fun setSequentialInputIntervalMs(context: Context, value: Long) {
+        getPrefs(context).edit().putLong(KEY_SEQUENTIAL_INPUT_INTERVAL_MS, value.coerceIn(20L, 5_000L)).apply()
+    }
+    fun getSequentialInputPunctuationPauseMs(context: Context): Long =
+        getPrefs(context).getLong(KEY_SEQUENTIAL_INPUT_PUNCTUATION_PAUSE_MS, 350L).coerceIn(0L, 5_000L)
+    fun setSequentialInputPunctuationPauseMs(context: Context, value: Long) {
+        getPrefs(context).edit().putLong(KEY_SEQUENTIAL_INPUT_PUNCTUATION_PAUSE_MS, value.coerceIn(0L, 5_000L)).apply()
+    }
     fun isSmsCodeEnabled(context: Context): Boolean = getPrefs(context).getBoolean("sms_code_enabled", false)
     fun setSmsCodeEnabled(context: Context, enabled: Boolean) {
         getPrefs(context).edit().putBoolean("sms_code_enabled", enabled).apply()
