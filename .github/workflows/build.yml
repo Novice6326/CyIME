@@ -112,6 +112,16 @@ jobs:
       - name: Download native deps (ONNX Runtime)
         run: ./gradlew downloadOnnx --build-cache --console=plain
 
+      - name: Setup signing keystore
+        run: |
+          cat > app/keystore.properties <<'EOF'
+          keyBase64=${{ secrets.SIGNING_KEY }}
+          storePassword=${{ secrets.KEY_STORE_PASSWORD }}
+          keyAlias=${{ secrets.ALIAS }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          EOF
+
+
       - name: Cache CMake build
         uses: actions/cache@v6
         with:
@@ -123,8 +133,18 @@ jobs:
           restore-keys: |
             cmake-${{ runner.os }}-
 
-      - name: Build Full ARM64 Debug APK
-        run: ./gradlew assembleDebug -PbundleModels=true -Parm64Only=true -PpythonExecutable=python3 --stacktrace --info --console=plain --build-cache --parallel
+      - name: Build Full ARM64 Signed Release APK
+        run: ./gradlew assembleRelease -PbundleModels=true -Parm64Only=true -PpythonExecutable=python3 --stacktrace --info --console=plain --build-cache --parallel
+
+      - name: Verify APK signatures
+        run: |
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | tail -1)
+          for apk in app/build/outputs/apk/release/CyIME-*.apk; do
+            OUT=$("$APKSIGNER" verify --verbose --min-sdk-version 23 --print-certs "$apk")
+            echo "$OUT" | grep -q 'Verified using v1 scheme (JAR signing): true'
+            echo "$OUT" | grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true'
+            echo "Verified: $apk"
+          done
 
       - name: Build Plugin XIPKs
         run: bash scripts/build-plugins.sh
@@ -134,7 +154,7 @@ jobs:
         with:
           name: full-arm64-apk
           path: |
-            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/release/*.apk
             build/plugin-release/*.xipk
           if-no-files-found: error
           retention-days: 7
