@@ -1096,7 +1096,7 @@ fun KeyboardView(
                 in ToolbarButton.LAYOUT_GESTURES -> item.button.gestureOn(inputPreferences, chineseGlideMenu, nineGlideMenu)
                 ToolbarButton.FULL_SHAPE -> widthSwitch?.let { it.states.getOrNull(it.currentIndex) == "全角" } == true
                 ToolbarButton.TRADITIONAL -> inputPreferences.traditionalOutput
-                ToolbarButton.SEQUENTIAL_INPUT -> callbacks.sequentialInputActive
+                ToolbarButton.SEQUENTIAL_INPUT -> callbacks.sequentialInputActive?.value == true
                 else -> false
             }) {
                 toolbarFeedback()
