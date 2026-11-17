@@ -28,13 +28,13 @@ internal class SequentialTextInputController(
         override fun run() {
             if (!active || paused) return
             if (nextIndex >= codePoints.size) {
-                finish(success = true)
+                finish(true)
                 return
             }
 
             val connection = inputConnection()
             if (connection == null) {
-                finish(success = false)
+                finish(false)
                 return
             }
 
@@ -65,7 +65,7 @@ internal class SequentialTextInputController(
         nextIndex = 0
         if (codePoints.isEmpty()) {
             onProgress(0, 0, false)
-            onFinished(success = true)
+            onFinished(true)
             return
         }
         active = true
@@ -101,7 +101,7 @@ internal class SequentialTextInputController(
         nextIndex = 0
         if (notify && hadWork) {
             onProgress(0, 0, false)
-            onFinished(success = false)
+            onFinished(false)
         }
     }
 
