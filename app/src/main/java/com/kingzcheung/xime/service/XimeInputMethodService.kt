@@ -3357,6 +3357,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     internal val sequentialInputController: SequentialTextInputController by lazy {
         SequentialTextInputController(
             inputConnection = { currentInputConnection },
+            intervalMs = { SettingsPreferences.getSequentialInputIntervalMs(this) },
+            punctuationPauseMs = { SettingsPreferences.getSequentialInputPunctuationPauseMs(this) },
             onFinished = { success ->
                 android.widget.Toast.makeText(this,
                     if (success) "逐字输入完成" else "逐字输入已中断",
