@@ -78,6 +78,7 @@ jobs:
         run: chmod +x gradlew
         
       - name: Run Unit Tests (non-blocking)
+        timeout-minutes: 20
         continue-on-error: true
         run: ./gradlew :app:testDebugUnitTest :plugin-core:testDebugUnitTest --no-daemon
         
