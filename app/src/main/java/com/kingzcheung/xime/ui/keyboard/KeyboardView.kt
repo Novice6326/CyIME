@@ -984,6 +984,7 @@ fun KeyboardView(
                 is ToolbarButtonItem.Builtin -> when (item.button) {
                     ToolbarButton.EMOJI -> ({ viewModel.toggleOverlay(OverlayRoute.Emoji) })
                     ToolbarButton.CLIPBOARD -> ({ viewModel.toggleOverlay(OverlayRoute.Clipboard(0)) })
+                    ToolbarButton.SEQUENTIAL_INPUT -> ({ callbacks.onSequentialInputAction?.invoke() })
                     ToolbarButton.OCR -> ({
                         com.kingzcheung.xime.ocr.OcrGallerySelection.uri.value = null
                         viewModel.toggleOverlay(OverlayRoute.Ocr)
@@ -1060,7 +1061,9 @@ fun KeyboardView(
                 })
             }
             val settingsEntry = com.kingzcheung.xime.ui.settings.menuSettingsEntry(item)
-            val openSettings: (() -> Unit)? = settingsEntry?.let { entry -> {
+            val openSettings: (() -> Unit)? = if (item is ToolbarButtonItem.Builtin && item.button == ToolbarButton.SEQUENTIAL_INPUT) {
+                callbacks.onSequentialInputStop
+            } else settingsEntry?.let { entry -> {
                 toolbarFeedback()
                 com.kingzcheung.xime.ui.settings.SettingsSearchFocus.open(entry)
                 callbacks.onSettingsPage?.invoke(entry.target)
@@ -1093,6 +1096,7 @@ fun KeyboardView(
                 in ToolbarButton.LAYOUT_GESTURES -> item.button.gestureOn(inputPreferences, chineseGlideMenu, nineGlideMenu)
                 ToolbarButton.FULL_SHAPE -> widthSwitch?.let { it.states.getOrNull(it.currentIndex) == "全角" } == true
                 ToolbarButton.TRADITIONAL -> inputPreferences.traditionalOutput
+                ToolbarButton.SEQUENTIAL_INPUT -> callbacks.sequentialInputActive
                 else -> false
             }) {
                 toolbarFeedback()
