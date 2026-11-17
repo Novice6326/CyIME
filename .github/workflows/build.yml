@@ -174,6 +174,33 @@ jobs:
           echo "CYIME_KEYSTORE_PATH=$KS" >> "$GITHUB_ENV"
           echo "Release keystore decoded and validated."
 
+      - name: Validate private-key password
+        if: github.event_name != 'pull_request'
+        shell: bash
+        env:
+          ALIAS: ${{ secrets.ALIAS }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          CHECK_KS="$RUNNER_TEMP/cyime-key-password-check.p12"
+          if ! keytool -importkeystore -noprompt \
+            -srckeystore "$CYIME_KEYSTORE_PATH" \
+            -srcstoretype "$CYIME_KEYSTORE_TYPE" \
+            -srcstorepass:env KEY_STORE_PASSWORD \
+            -srcalias "$ALIAS" \
+            -srckeypass:env KEY_PASSWORD \
+            -destkeystore "$CHECK_KS" \
+            -deststoretype PKCS12 \
+            -deststorepass:env KEY_STORE_PASSWORD \
+            -destkeypass:env KEY_STORE_PASSWORD \
+            >/dev/null 2>&1; then
+            echo "::error::KEY_PASSWORD cannot unlock the private-key entry for the configured alias."
+            exit 1
+          fi
+          rm -f "$CHECK_KS"
+          echo "Private-key password validated successfully."
+ 
       - name: Sign Main App APKs
         if: github.event_name != 'pull_request'
         shell: bash
