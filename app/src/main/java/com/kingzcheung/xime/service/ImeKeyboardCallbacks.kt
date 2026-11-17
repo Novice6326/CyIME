@@ -206,7 +206,28 @@ internal fun rememberImeKeyboardCallbacks(
                     )
                 }
             },
-            onClipboardSelect = { text -> service.textCommit.selectClipboardItem(text) },
+            sequentialInputActive = service.sequentialInputMode || service.sequentialInputController.isRunning || service.sequentialInputController.isPaused,
+            onSequentialInputAction = {
+                when {
+                    service.sequentialInputController.isRunning -> service.sequentialInputController.pause()
+                    service.sequentialInputController.isPaused -> service.sequentialInputController.resume()
+                    else -> {
+                        service.sequentialInputMode = !service.sequentialInputMode
+                        android.widget.Toast.makeText(service,
+                            if (service.sequentialInputMode) "已开启逐字输入：选择一条剪贴板文字即可逐字发送" else "已关闭逐字输入",
+                            android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }
+            },
+            onSequentialInputStop = {
+                service.sequentialInputController.stop()
+                service.sequentialInputMode = false
+                android.widget.Toast.makeText(service, "逐字输入已停止", android.widget.Toast.LENGTH_SHORT).show()
+            },
+            onClipboardSelect = { text ->
+                if (service.sequentialInputMode) service.sequentialInputController.start(text)
+                else service.textCommit.selectClipboardItem(text)
+            },
             onClipboardRecordCommitted = { service.feedbackManager.playClipboardCommitSound() },
             onClipboardImageSelect = { image ->
                 service.serviceScope.launch {
