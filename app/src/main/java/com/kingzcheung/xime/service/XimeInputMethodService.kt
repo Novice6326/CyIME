@@ -3351,12 +3351,24 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     /** 实体键盘 Ctrl+回车、Shift+回车按下时已处理，抬起也不再交给应用。 */
     private val ctrlEnterKeys = mutableSetOf<Int>()
     internal val sequentialInputModeState = androidx.compose.runtime.mutableStateOf(false)
+    internal val sequentialInputProgressState = androidx.compose.runtime.mutableStateOf("")
     internal var sequentialInputMode: Boolean
         get() = sequentialInputModeState.value
         set(value) { sequentialInputModeState.value = value }
     internal val sequentialInputController: SequentialTextInputController by lazy {
         SequentialTextInputController(
             inputConnection = { currentInputConnection },
+            intervalMs = { SettingsPreferences.getSequentialInputIntervalMs(this) },
+            punctuationPauseMs = { SettingsPreferences.getSequentialInputPunctuationPauseMs(this) },
+            onProgress = { committed, total, running ->
+                sequentialInputProgressState.value = when {
+                    total <= 0 -> ""
+                    running -> "逐字输入中 · $committed/$total"
+                    sequentialInputController.isPaused -> "逐字输入已暂停 · $committed/$total"
+                    committed >= total -> "逐字输入完成 · $committed/$total"
+                    else -> "逐字输入已中断 · $committed/$total"
+                }
+            },
             onFinished = { success ->
                 android.widget.Toast.makeText(this,
                     if (success) "逐字输入完成" else "逐字输入已中断",
@@ -4496,6 +4508,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         EnterKeyAction.label(editorInfo.imeOptions, appSend = SettingsPreferences.isEnterSendsEnabled(this))
 
     override fun onFinishInput() {
+        // Losing editor focus must never leave a paced paste writing into a different app or field.
+        sequentialInputController.stop()
+        sequentialInputMode = false
         gameShowExplicit = false
         suspendCompositionForScreenOff()
         endGlidePreview()
@@ -5154,6 +5169,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     }
 
     override fun onDestroy() {
+        // Cancel any pending Handler tick before this service and its InputConnection are torn down.
+        sequentialInputController.stop()
+        sequentialInputMode = false
         runCatching {
             (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager)
                 .removePrimaryClipChangedListener(sequentialClipboardChangeListener)

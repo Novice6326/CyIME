@@ -24,6 +24,7 @@ git -C "$WORK/slimt" submodule update --init --recursive
 for abi in arm64-v8a x86_64; do
   cmake -S "$HERE" -B "$WORK/build-$abi" -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
     -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK/build/cmake/android.toolchain.cmake" \
     -DANDROID_ABI=$abi -DANDROID_PLATFORM=android-28 -DANDROID_STL=c++_static \
     -DSLIMT_SOURCE_DIR="$WORK/slimt"

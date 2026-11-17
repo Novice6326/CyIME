@@ -207,6 +207,7 @@ internal fun rememberImeKeyboardCallbacks(
                 }
             },
             sequentialInputActive = service.sequentialInputModeState,
+            sequentialInputProgress = service.sequentialInputProgressState,
             onSequentialInputAction = {
                 when {
                     service.sequentialInputController.isRunning -> service.sequentialInputController.pause()

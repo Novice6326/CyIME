@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.kingzcheung.xime.settings.KeysConfigHelper
+import com.kingzcheung.xime.ui.keyboard.AppFonts
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -40,6 +41,7 @@ class NumberRowLongPressTest {
     private fun show() {
         val app = ApplicationProvider.getApplicationContext<Application>()
         KeysConfigHelper.loadConfig(app)
+        AppFonts.initialize(app)
         com.kingzcheung.xime.ui.theme.KeyboardThemes.initFromConfig(app)
         rule.setContent {
             CompositionLocalProvider(LocalKeyboardInputPreferences provides KeyboardInputPreferences(numberRow = true)) {

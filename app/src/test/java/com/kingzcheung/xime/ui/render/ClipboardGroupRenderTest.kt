@@ -75,8 +75,11 @@ class ClipboardGroupRenderTest {
 
     @Test fun dragGroupAheadOfTextThenRenameAndDeleteByButton() {
         val store = ClipboardGroupStore.getInstance(rule.activity)
-        store.add("收藏", listOf("text:7"))
-        val id = store.state.value.groups.single().id
+        // This singleton persists through the Robolectric process; isolate this test from prior runs.
+        store.state.value.groups.toList().forEach { store.delete(it.id) }
+        store.setTabOrder(emptyList())
+        assertEquals(null, store.add("收藏", listOf("text:7")))
+        val id = store.state.value.groups.single { it.name == "收藏" }.id
         rule.setContent { XimeTheme(darkTheme = true) { ClipboardGroupSettingsContent(onBack = {}) } }
         val from = rule.onNodeWithTag("clipboard-order:group:$id").fetchSemanticsNode().boundsInRoot.center
         val to = rule.onNodeWithTag("clipboard-order:TEXT").fetchSemanticsNode().boundsInRoot.center
@@ -88,11 +91,11 @@ class ClipboardGroupRenderTest {
         }
         rule.waitForIdle()
         assertEquals(listOf("ALL", "group:$id", "TEXT"), clipboardTabs(store.state.value).take(3).map { it.key })
+        assertEquals("重排后成员仍属于该分组", id, store.state.value.members["text:7"])
         rule.onNodeWithContentDescription("改名").performClick()
         rule.onNodeWithTag("clipboard-group-name").performTextReplacement("常用")
         rule.onNodeWithTag("clipboard-group-name-save").performClick()
         assertEquals("常用", clipboardTabs(store.state.value)[1].label)
-        assertEquals(id, store.state.value.members["text:7"])
         rule.onNodeWithContentDescription("删除").performClick()
         rule.onNodeWithText("取消").performClick()
         assertEquals(id, store.state.value.groups.single().id)

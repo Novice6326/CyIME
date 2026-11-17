@@ -112,9 +112,11 @@ android {
 
         // NDK 配置
         ndk {
+            // ABI selection is handled by ndk.abiFilters only for the single-ABI CI build.
+            // Multi-ABI builds are filtered by the APK splits block below; setting both
+            // mechanisms at once makes AGP reject the variant during configuration.
             val arm64Only = providers.gradleProperty("arm64Only").orNull == "true"
-            abiFilters += if (arm64Only) listOf("arm64-v8a")
-                else listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+            if (arm64Only) abiFilters += "arm64-v8a"
         }
 
         // 构建信息
@@ -270,10 +272,11 @@ android {
     splits {
         abi {
             val arm64Only = providers.gradleProperty("arm64Only").orNull == "true"
-            isEnable = true
+            // For ARM64-only CI builds, let NDK abiFilters select the native ABI and
+            // disable APK splitting. For normal builds, use ABI splits exclusively.
+            isEnable = !arm64Only
             reset()
-            if (arm64Only) include("arm64-v8a")
-            else include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+            if (!arm64Only) include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
             isUniversalApk = !arm64Only
         }
     }
@@ -410,4 +413,12 @@ dependencies {
             because("test dependencies (espresso 3.7.0) require 1.2.0")
         }
     }
+}
+
+
+// Keep the large Robolectric/Compose suite from exhausting the default 512 MiB test worker.
+// Periodically restart the worker so native graphics and Android test resources are reclaimed.
+tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+    maxHeapSize = "2g"
+    forkEvery = 40
 }

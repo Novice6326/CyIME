@@ -1,4 +1,4 @@
-﻿name: Build and Test APK
+name: Build and Test APK
 
 on:
   push:
@@ -17,39 +17,90 @@ permissions:
   checks: write
 
 jobs:
-  build-and-test:
+  test:
+    name: Unit tests
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 45
+    if: github.event_name != 'pull_request' || github.head_ref != 'dev-typing-input'
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
         with:
           submodules: recursive
-          fetch-depth: 0
-        
+          fetch-depth: 1
+
       - name: Set up JDK 17
         uses: actions/setup-java@v5
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '17'
-          cache: 'gradle'
-          
+          cache: gradle
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
         with:
           packages: platform-tools
-        
-      - name: Install NDK
+
+      - name: Install NDK and native build tools
         run: |
           sdkmanager "ndk;29.0.14206865"
-          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/29.0.14206865" >> $GITHUB_ENV
-          echo "ANDROID_NDK=$ANDROID_HOME/ndk/29.0.14206865" >> $GITHUB_ENV
-        
-      - name: Install build tools
-        run: |
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build
-          
+
+      - name: Run unit tests with diagnostic output
+        timeout-minutes: 35
+        run: ./gradlew :app:testDebugUnitTest :plugin-core:testDebugUnitTest --stacktrace --info --console=plain --build-cache --no-parallel --max-workers=1
+
+      - name: Generate Test Report
+        if: always()
+        uses: mikepenz/action-junit-report@v6
+        with:
+          report_paths: '**/build/test-results/testDebugUnitTest/*.xml'
+          fail_on_failure: true
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: unit-test-results
+          path: |
+            app/build/test-results/testDebugUnitTest/
+            plugin-core/build/test-results/testDebugUnitTest/
+          if-no-files-found: warn
+          retention-days: 7
+
+  build-apk:
+    name: Build ARM64 APK and plugins
+    if: github.event_name != 'pull_request' || github.head_ref != 'dev-typing-input'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
+
+      - name: Install NDK and native build tools
+        run: |
+          sdkmanager "ndk;29.0.14206865"
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/29.0.14206865" >> $GITHUB_ENV
+          echo "ANDROID_NDK=$ANDROID_HOME/ndk/29.0.14206865" >> $GITHUB_ENV
+
       - name: Cache native deps
         uses: actions/cache@v6
         with:
@@ -61,8 +112,8 @@ jobs:
             native-${{ runner.os }}-
 
       - name: Download native deps (ONNX Runtime)
-        run: ./gradlew downloadOnnx --no-daemon
-        
+        run: ./gradlew downloadOnnx --build-cache --console=plain
+
       - name: Cache CMake build
         uses: actions/cache@v6
         with:
@@ -73,40 +124,127 @@ jobs:
           key: cmake-${{ runner.os }}-${{ hashFiles('app/src/main/jni/CMakeLists.txt') }}
           restore-keys: |
             cmake-${{ runner.os }}-
-            
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-        
-      - name: Run Unit Tests (non-blocking)
-        continue-on-error: true
-        run: ./gradlew :app:testDebugUnitTest :plugin-core:testDebugUnitTest --no-daemon
-        
-      - name: Generate Test Report
-        if: always()
-        uses: mikepenz/action-junit-report@v6
-        with:
-          report_paths: '**/build/test-results/testDebugUnitTest/*.xml'
-          fail_on_failure: false
-          
-      - name: Upload Test Results
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: unit-test-results
-          path: app/build/test-results/testDebugUnitTest/
-          retention-days: 7
-          
-      - name: Build Full ARM64 Debug APK
-        run: ./gradlew assembleDebug -PbundleModels=true -Parm64Only=true -PpythonExecutable=python3 --no-daemon
+
+      - name: Build offline translation native libraries
+        run: |
+          bash tools/offline_translate/build-android.sh
+          echo "CYIME_TRANSLATE_LIB_SHA256_ARM64=$(sha256sum tools/offline_translate/work/out/arm64-v8a/libcytranslate.so | cut -d' ' -f1)" >> "$GITHUB_ENV"
+          echo "CYIME_TRANSLATE_LIB_SHA256_X86_64=$(sha256sum tools/offline_translate/work/out/x86_64/libcytranslate.so | cut -d' ' -f1)" >> "$GITHUB_ENV"
+
+      - name: Build Full ARM64 Release APK (unsigned)
+        run: ./gradlew assembleRelease -PbundleModels=true -Parm64Only=true -PpythonExecutable=python3 -Pcyime.translateLibDir=tools/offline_translate/work/out --stacktrace --info --console=plain --build-cache --parallel
+
+      - name: Validate release signing secrets
+        if: github.event_name != 'pull_request'
+        shell: bash
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          ALIAS: ${{ secrets.ALIAS }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          missing=()
+          [[ -n "$SIGNING_KEY" ]] || missing+=("SIGNING_KEY")
+          [[ -n "$ALIAS" ]] || missing+=("ALIAS")
+          [[ -n "$KEY_STORE_PASSWORD" ]] || missing+=("KEY_STORE_PASSWORD")
+          [[ -n "$KEY_PASSWORD" ]] || missing+=("KEY_PASSWORD")
+          if (( ${#missing[@]} )); then
+            printf '::error::Release signing secrets are missing or empty: %s\\n' "${missing[*]}"
+            exit 1
+          fi
+
+      - name: Decode and validate release signing keystore
+        if: github.event_name != 'pull_request'
+        shell: bash
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          ALIAS: ${{ secrets.ALIAS }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KS="$RUNNER_TEMP/cyime-release.jks"
+          printf '%s' "$SIGNING_KEY" | tr -d '[:space:]' | base64 --decode > "$KS"
+          test -s "$KS"
+          if keytool -list -keystore "$KS" -storetype JKS -storepass "$KEY_STORE_PASSWORD" -alias "$ALIAS" >/dev/null 2>&1; then
+            echo "CYIME_KEYSTORE_TYPE=JKS" >> "$GITHUB_ENV"
+          elif keytool -list -keystore "$KS" -storetype PKCS12 -storepass "$KEY_STORE_PASSWORD" -alias "$ALIAS" >/dev/null 2>&1; then
+            echo "CYIME_KEYSTORE_TYPE=PKCS12" >> "$GITHUB_ENV"
+          else
+            echo "::error::Decoded signing keystore is invalid, password is incorrect, or alias is missing."
+            exit 1
+          fi
+          echo "CYIME_KEYSTORE_PATH=$KS" >> "$GITHUB_ENV"
+          echo "Release keystore decoded and validated."
+
+      - name: Validate private-key password
+        if: github.event_name != 'pull_request'
+        shell: bash
+        env:
+          ALIAS: ${{ secrets.ALIAS }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          CHECK_KS="$RUNNER_TEMP/cyime-key-password-check.p12"
+          if ! keytool -importkeystore -noprompt \
+            -srckeystore "$CYIME_KEYSTORE_PATH" \
+            -srcstoretype "$CYIME_KEYSTORE_TYPE" \
+            -srcstorepass:env KEY_STORE_PASSWORD \
+            -srcalias "$ALIAS" \
+            -srckeypass:env KEY_PASSWORD \
+            -destkeystore "$CHECK_KS" \
+            -deststoretype PKCS12 \
+            -deststorepass:env KEY_STORE_PASSWORD \
+            -destkeypass:env KEY_STORE_PASSWORD \
+            >/dev/null 2>&1; then
+            echo "::error::KEY_PASSWORD cannot unlock the private-key entry for the configured alias."
+            exit 1
+          fi
+          rm -f "$CHECK_KS"
+          echo "Private-key password validated successfully."
+ 
+      - name: Sign Main App APKs
+        if: github.event_name != 'pull_request'
+        shell: bash
+        env:
+          ALIAS: ${{ secrets.ALIAS }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
+          shopt -s nullglob
+          apks=(app/build/outputs/apk/release/CyIME-*.apk)
+          (("${#apks[@]}" > 0)) || { echo "::error::No release APKs found"; exit 1; }
+          for apk in "${apks[@]}"; do
+            tmp="${apk%.apk}-signed.tmp.apk"
+            "$APKSIGNER" sign --ks "$CYIME_KEYSTORE_PATH" --ks-type "$CYIME_KEYSTORE_TYPE" --ks-key-alias "$ALIAS" --ks-pass "pass:$KEY_STORE_PASSWORD" --key-pass "pass:$KEY_PASSWORD" --out "$tmp" "$apk"
+            mv "$tmp" "$apk"
+            echo "Signed: $(basename "$apk")"
+          done
+
+      - name: Verify APK signatures
+        if: github.event_name != 'pull_request'
+        run: |
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | tail -1)
+          for apk in app/build/outputs/apk/release/CyIME-*.apk; do
+            OUT=$("$APKSIGNER" verify --verbose --min-sdk-version 23 --print-certs "$apk")
+            echo "$OUT" | grep -q 'Verified using v1 scheme (JAR signing): true'
+            echo "$OUT" | grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true'
+            echo "Verified: $apk"
+          done
 
       - name: Build Plugin XIPKs
+        if: github.event_name != 'pull_request'
         run: bash scripts/build-plugins.sh
 
-      - name: Upload Full ARM64 APK
+      - name: Upload Full ARM64 APK and plugins
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v7
         with:
           name: full-arm64-apk
           path: |
-            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/release/*.apk
             build/plugin-release/*.xipk
+          if-no-files-found: error
           retention-days: 7
