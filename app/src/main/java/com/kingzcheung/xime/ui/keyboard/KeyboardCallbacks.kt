@@ -97,7 +97,7 @@ data class KeyboardCallbacks(
     val onDismissClipboardPreview: (() -> Unit)? = null,
     val onClipboardSelect: ((String) -> Unit)? = null,
     /** Whether clipboard selection currently starts paced, character-by-character input. */
-    val sequentialInputActive: Boolean = false,
+    val sequentialInputActive: androidx.compose.runtime.State<Boolean>? = null,
     val onSequentialInputAction: (() -> Unit)? = null,
     val onSequentialInputStop: (() -> Unit)? = null,
     /** A clipboard record (text or picture) was put into the text from the clipboard board. */
