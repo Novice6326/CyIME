@@ -1122,7 +1122,7 @@ fun KeyboardView(
                 .then(if (onPreviewArrangePositioned != null) Modifier.clearAndSetSemantics {} else Modifier)
         ) {
             callbacks.sequentialInputProgress?.value?.takeIf { it.isNotBlank() }?.let { progressText ->
-                androidx.compose.material.Text(
+                Text(
                     text = progressText,
                     color = Color.Gray,
                     fontSize = 11.sp,
