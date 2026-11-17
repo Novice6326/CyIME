@@ -167,7 +167,9 @@ class InlineQuickActionRenderTest {
         assertTrue("保存提示应位于对钩下方并留在键盘内", hint.top >= editSlot.bottom && hint.right <= 360f && hint.center.x > 180f)
         rule.onNodeWithContentDescription("隐藏声音振动", useUnmergedTree = true).assertIsDisplayed()
         rule.onNodeWithContentDescription("添加拍照识别", useUnmergedTree = true).assertIsDisplayed()
-        val view = rule.activity.window.decorView
+        // boundsInRoot is relative to the activity content/Compose root, not the decor view
+        // (which also contains the status bar). Draw the same content root before sampling pixels.
+        val view = rule.activity.findViewById<android.view.View>(android.R.id.content)
         val image = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
         rule.runOnIdle { view.draw(android.graphics.Canvas(image)) }
         val output = File("build/reports/inline-quick-action-visibility.png")
