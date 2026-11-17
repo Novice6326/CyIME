@@ -40,14 +40,14 @@ internal class SequentialTextInputController(
 
             val text = String(Character.toChars(codePoints[nextIndex]))
             if (!connection.commitText(text, 1)) {
-                finish(success = false)
+                finish(false)
                 return
             }
 
             nextIndex++
             onProgress(nextIndex, codePoints.size, active && !paused)
             if (nextIndex >= codePoints.size) {
-                finish(success = true)
+                finish(true)
             } else {
                 handler.postDelayed(this, intervalMs.coerceAtLeast(20L))
             }
