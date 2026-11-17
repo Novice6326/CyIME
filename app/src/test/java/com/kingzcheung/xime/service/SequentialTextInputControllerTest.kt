@@ -2,7 +2,6 @@ package com.kingzcheung.xime.service
 
 import android.os.Looper
 import android.view.inputmethod.InputConnection
-import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -45,11 +44,11 @@ class SequentialTextInputControllerTest {
         val finished = mutableListOf<Boolean>()
         val input = "👨‍👩‍👧‍👦🇺🇸e\u0301"
 
-        controller(connection, onFinished = finished::add).start(input)
+        controller(connection, onFinished = { finished += it }).start(input)
         shadowOf(Looper.getMainLooper()).idleFor(2, TimeUnit.SECONDS)
 
         verify(connection, times(3)).commitText(captor.capture(), eq(1))
-        assertEquals(listOf("👨‍👩‍👧‍👦", "🇺🇸", "e\u0301"), captor.allValues.map(CharSequence::toString))
+        assertEquals(listOf("👨‍👩‍👧‍👦", "🇺🇸", "e\u0301"), captor.allValues.map { it.toString() })
         assertEquals(listOf(true), finished)
     }
 
@@ -89,7 +88,7 @@ class SequentialTextInputControllerTest {
         val finished = mutableListOf<Boolean>()
         val progress = mutableListOf<Triple<Int, Int, Boolean>>()
 
-        controller(connection, finished::add) { done, total, running ->
+        controller(connection, { finished += it }) { done, total, running ->
             progress += Triple(done, total, running)
         }.start("")
 
