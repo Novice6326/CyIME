@@ -4525,6 +4525,10 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         voiceKeptAlive = false
         voicePillSelfShow = false
         debugLog("onFinishInput page=${keyboardViewModel.page.value::class.simpleName}")
+        // The editor session is ending even if Android does not deliver onFinishInputView first.
+        // Pause paced commits immediately; a matching field may be resumed explicitly, a different
+        // field is invalidated by onStartInput's EditorInfo identity check.
+        sequentialInputController.pause()
         englishEditorReadCapability.clear()
         inputStallWatchdog?.stop()
         hardwareLanguageShortcuts.reset()
