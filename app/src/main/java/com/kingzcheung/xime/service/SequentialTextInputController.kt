@@ -1,55 +1,89 @@
 package com.kingzcheung.xime.service
 
+import android.content.SharedPreferences
 import android.os.Handler
 import android.os.Looper
+import android.text.InputType
+import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import androidx.annotation.MainThread
+import com.kingzcheung.xime.wentao.WentaoTypingPacing
+import com.kingzcheung.xime.wentao.WentaoTypingProfile
+import com.kingzcheung.xime.wentao.WentaoTypingText
+import kotlin.random.Random
+
+data class SequentialInputProgress(
+    val committed: Int = 0,
+    val total: Int = 0,
+    val running: Boolean = false
+) {
+    val percent: Int get() = if (total <= 0) 0 else (committed * 100 / total).coerceIn(0, 100)
+}
 
 /**
- * Sends clipboard text to the active editor one Unicode code point at a time.
+ * 把剪贴板文本逐个用户感知字符提交到当前编辑器。
  *
- * All methods are main-thread only. The controller deliberately owns no clipboard access or UI;
- * the IME service supplies the selected text and current InputConnection.
+ * 每次提交前重新核对 EditorInfo 与目标快照；输入框切换、连接失效或密码框均不会继续写入。
+ * 任务文本、位置和目标身份保存在私有 SharedPreferences，只有同一目标重新获得焦点时才允许恢复。
  */
 @MainThread
 internal class SequentialTextInputController(
     private val inputConnection: () -> InputConnection?,
-    private val intervalMs: Long = DEFAULT_INTERVAL_MS,
+    private val currentEditor: () -> EditorInfo?,
+    private val checkpoint: SharedPreferences,
     private val onProgress: (committed: Int, total: Int, running: Boolean) -> Unit = { _, _, _ -> },
     private val onFinished: (success: Boolean) -> Unit = {},
 ) {
     private val handler = Handler(Looper.getMainLooper())
-    private var codePoints: IntArray = intArrayOf()
+    private var units: List<String> = emptyList()
+    private var sourceText = ""
     private var nextIndex = 0
+    private var target: EditorTarget? = null
     private var active = false
     private var paused = false
+
+    var profile: WentaoTypingProfile = WentaoTypingProfile.preset(WentaoTypingProfile.Preset.LEVEL_3)
+        private set
+    var randomIntervals: Boolean = true
+        private set
 
     private val tick = object : Runnable {
         override fun run() {
             if (!active || paused) return
-            if (nextIndex >= codePoints.size) {
+            val expected = target
+            val editor = currentEditor()
+            if (expected == null || editor == null || !expected.matches(editor) || isSensitive(editor.inputType)) {
+                pause()
+                onFinished(false)
+                return
+            }
+            val connection = inputConnection()
+            if (connection == null) {
+                pause()
+                onFinished(false)
+                return
+            }
+            val unit = units.getOrNull(nextIndex)
+            if (unit == null) {
                 finish(true)
                 return
             }
-
-            val connection = inputConnection()
-            if (connection == null) {
-                finish(false)
-                return
-            }
-
-            val text = String(Character.toChars(codePoints[nextIndex]))
-            if (!connection.commitText(text, 1)) {
-                finish(false)
+            if (!connection.commitText(unit, 1)) {
+                pause()
+                onFinished(false)
                 return
             }
 
             nextIndex++
-            onProgress(nextIndex, codePoints.size, active && !paused)
-            if (nextIndex >= codePoints.size) {
+            saveCheckpoint()
+            onProgress(nextIndex, units.size, active && !paused)
+            if (nextIndex >= units.size) {
                 finish(true)
             } else {
-                handler.postDelayed(this, intervalMs.coerceAtLeast(20L))
+                val jitter = if (randomIntervals) Random.nextDouble(-0.25, 0.25) else 0.0
+                val delayNanos = WentaoTypingPacing.nextDelayNanos(unit, profile, jitter)
+                val delayMs = ((delayNanos + NANOS_PER_MILLI - 1L) / NANOS_PER_MILLI).coerceAtLeast(1L)
+                handler.postDelayed(this, delayMs)
             }
         }
     }
@@ -57,20 +91,48 @@ internal class SequentialTextInputController(
     val isRunning: Boolean get() = active && !paused
     val isPaused: Boolean get() = active && paused
     val committedCount: Int get() = nextIndex
-    val totalCount: Int get() = codePoints.size
+    val totalCount: Int get() = units.size
+
+    fun setProfile(value: WentaoTypingProfile) {
+        profile = value
+        saveCheckpoint()
+    }
+
+    fun setRandomIntervals(enabled: Boolean) {
+        randomIntervals = enabled
+        saveCheckpoint()
+    }
 
     fun start(text: String) {
         stop(notify = false)
-        codePoints = text.codePoints().toArray()
+        val editor = currentEditor()
+        val connection = inputConnection()
+        if (text.isEmpty() || editor == null || connection == null ||
+            editor.packageName.isNullOrBlank() || editor.inputType == 0 || isSensitive(editor.inputType)) {
+            onProgress(0, 0, false)
+            onFinished(false)
+            return
+        }
+        val snapshot = EditorTarget.from(editor)
+        if (snapshot == null) {
+            onProgress(0, 0, false)
+            onFinished(false)
+            return
+        }
+        sourceText = text
+        units = WentaoTypingText.splitCharacters(text)
         nextIndex = 0
-        if (codePoints.isEmpty()) {
+        target = snapshot
+        if (units.isEmpty()) {
+            clearCheckpoint()
             onProgress(0, 0, false)
             onFinished(true)
             return
         }
         active = true
         paused = false
-        onProgress(0, codePoints.size, true)
+        saveCheckpoint()
+        onProgress(0, units.size, true)
         handler.post(tick)
     }
 
@@ -78,13 +140,22 @@ internal class SequentialTextInputController(
         if (!active || paused) return
         paused = true
         handler.removeCallbacks(tick)
-        onProgress(nextIndex, codePoints.size, false)
+        saveCheckpoint()
+        onProgress(nextIndex, units.size, false)
     }
 
     fun resume() {
         if (!active || !paused) return
+        val expected = target
+        val editor = currentEditor()
+        if (expected == null || editor == null || !expected.matches(editor) || isSensitive(editor.inputType)) {
+            pause()
+            onFinished(false)
+            return
+        }
         paused = false
-        onProgress(nextIndex, codePoints.size, true)
+        saveCheckpoint()
+        onProgress(nextIndex, units.size, true)
         handler.post(tick)
     }
 
@@ -92,13 +163,95 @@ internal class SequentialTextInputController(
         stop(notify = true)
     }
 
+    /**
+     * Called after InputMethodService.onStartInput. A same-field task remains resumable;
+     * a different field invalidates it. A persisted task is restored paused, never auto-typed.
+     */
+    fun onEditorStarted(editor: EditorInfo?, restarting: Boolean): Boolean {
+        if (editor == null || isSensitive(editor.inputType)) {
+            if (active) stop()
+            else clearCheckpoint()
+            return false
+        }
+        val currentTarget = target
+        if (active) {
+            if (currentTarget != null && currentTarget.matches(editor)) {
+                if (restarting && paused) return true
+                if (!restarting && isRunning) pause()
+                return true
+            }
+            stop()
+        }
+        return restoreFor(editor)
+    }
+
+    private fun restoreFor(editor: EditorInfo): Boolean {
+        val text = checkpoint.getString(KEY_TEXT, null).orEmpty()
+        val savedTarget = EditorTarget(
+            packageName = checkpoint.getString(KEY_PACKAGE, "").orEmpty(),
+            fieldId = checkpoint.getInt(KEY_FIELD_ID, 0),
+            inputType = checkpoint.getInt(KEY_INPUT_TYPE, 0),
+            fieldName = checkpoint.getString(KEY_FIELD_NAME, null)
+        )
+        val index = checkpoint.getInt(KEY_INDEX, 0)
+        val split = if (text.isNotEmpty()) WentaoTypingText.splitCharacters(text) else emptyList()
+        if (text.isEmpty() || text.length > MAX_TEXT_LENGTH || split.isEmpty() ||
+            index !in 0 until split.size || !savedTarget.matches(editor)) {
+            clearCheckpoint()
+            return false
+        }
+        sourceText = text
+        units = split
+        nextIndex = index
+        target = savedTarget
+        val savedSpeed = checkpoint.getLong(KEY_SPEED, 12_000L).coerceAtLeast(1L)
+        val savedCustom = checkpoint.getBoolean(KEY_CUSTOM_SPEED, false)
+        profile = if (savedCustom) WentaoTypingProfile.custom(savedSpeed) else {
+            WentaoTypingProfile.Preset.entries
+                .firstOrNull { it.charactersPerHour == savedSpeed }
+                ?.let(WentaoTypingProfile::preset)
+                ?: WentaoTypingProfile.custom(savedSpeed)
+        }
+        randomIntervals = checkpoint.getBoolean(KEY_RANDOM, true)
+        active = true
+        paused = true
+        onProgress(nextIndex, units.size, false)
+        return true
+    }
+
+    private fun saveCheckpoint() {
+        val editorTarget = target ?: return
+        if (sourceText.isEmpty() || !active) return
+        checkpoint.edit()
+            .putString(KEY_TEXT, sourceText)
+            .putInt(KEY_INDEX, nextIndex)
+            .putString(KEY_PACKAGE, editorTarget.packageName)
+            .putInt(KEY_FIELD_ID, editorTarget.fieldId)
+            .putInt(KEY_INPUT_TYPE, editorTarget.inputType)
+            .putString(KEY_FIELD_NAME, editorTarget.fieldName)
+            .putLong(KEY_SPEED, profile.charactersPerHour)
+            .putBoolean(KEY_CUSTOM_SPEED, profile.isCustom)
+            .putBoolean(KEY_RANDOM, randomIntervals)
+            .apply()
+    }
+
+    private fun clearCheckpoint() {
+        checkpoint.edit().remove(KEY_TEXT).remove(KEY_INDEX)
+            .remove(KEY_PACKAGE).remove(KEY_FIELD_ID).remove(KEY_INPUT_TYPE)
+            .remove(KEY_FIELD_NAME).remove(KEY_SPEED).remove(KEY_CUSTOM_SPEED)
+            .remove(KEY_RANDOM).apply()
+    }
+
     private fun stop(notify: Boolean) {
         val hadWork = active
         handler.removeCallbacks(tick)
         active = false
         paused = false
-        codePoints = intArrayOf()
+        units = emptyList()
+        sourceText = ""
         nextIndex = 0
+        target = null
+        clearCheckpoint()
         if (notify && hadWork) {
             onProgress(0, 0, false)
             onFinished(false)
@@ -109,15 +262,61 @@ internal class SequentialTextInputController(
         handler.removeCallbacks(tick)
         active = false
         paused = false
-        val total = codePoints.size
+        val total = units.size
         val committed = nextIndex
-        codePoints = intArrayOf()
+        units = emptyList()
+        sourceText = ""
         nextIndex = 0
+        target = null
+        clearCheckpoint()
         onProgress(committed, total, false)
         onFinished(success)
     }
 
+    private fun isSensitive(inputType: Int): Boolean {
+        val inputClass = inputType and InputType.TYPE_MASK_CLASS
+        val variation = inputType and InputType.TYPE_MASK_VARIATION
+        return (inputClass == InputType.TYPE_CLASS_TEXT && variation in setOf(
+            InputType.TYPE_TEXT_VARIATION_PASSWORD,
+            InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD,
+            InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD
+        )) || (inputClass == InputType.TYPE_CLASS_NUMBER &&
+            variation == InputType.TYPE_NUMBER_VARIATION_PASSWORD)
+    }
+
+    private data class EditorTarget(
+        val packageName: String,
+        val fieldId: Int,
+        val inputType: Int,
+        val fieldName: String?
+    ) {
+        fun matches(editor: EditorInfo): Boolean =
+            packageName.isNotBlank() && inputType != 0 &&
+                packageName == editor.packageName &&
+                fieldId == editor.fieldId &&
+                inputType == editor.inputType &&
+                fieldName == editor.fieldName
+
+        companion object {
+            fun from(editor: EditorInfo): EditorTarget? {
+                val packageName = editor.packageName?.takeIf(String::isNotBlank) ?: return null
+                if (editor.inputType == 0) return null
+                return EditorTarget(packageName, editor.fieldId, editor.inputType, editor.fieldName)
+            }
+        }
+    }
+
     companion object {
-        const val DEFAULT_INTERVAL_MS = 120L
+        private const val NANOS_PER_MILLI = 1_000_000L
+        private const val MAX_TEXT_LENGTH = 262_144
+        private const val KEY_TEXT = "text"
+        private const val KEY_INDEX = "index"
+        private const val KEY_PACKAGE = "package"
+        private const val KEY_FIELD_ID = "field_id"
+        private const val KEY_INPUT_TYPE = "input_type"
+        private const val KEY_FIELD_NAME = "field_name"
+        private const val KEY_SPEED = "speed"
+        private const val KEY_CUSTOM_SPEED = "custom_speed"
+        private const val KEY_RANDOM = "random"
     }
 }
