@@ -71,3 +71,12 @@ CyIME 上游采用 GPL-3.0。基于该代码分发的文涛输入法版本必须
 - [x] 增加 ZWJ 后任意普通字母不能被误并入 Emoji ZWJ 序列的测试。
 - [ ] Extended_Pictographic 仍为精简范围表，完整 emoji-data.txt 属性和官方 GraphemeBreakTest.txt 全量一致性尚未完成。
 - [ ] Android Gradle 单测、Instrumentation 和多应用真机测试尚未获得通过记录。
+
+
+## Unicode 18.0 字素分割验收进展（2026-11-18）
+
+- [x] 将 Unicode 18.0.0 官方 GraphemeBreakTest.txt（853 组用例）、GraphemeBreakProperty.txt 和 emoji-data.txt 纳入测试资源，保留原始文件头与来源说明。
+- [x] 生成精确 GCB Control、Extend、Prepend、SpacingMark、Regional_Indicator、Hangul L/V/T/LV/LVT，以及 Extended_Pictographic 属性表；以范围二分查找，避免依赖 Android/JDK Character 数据版本。
+- [x] 按 Unicode 18.0 Revision 49 更新 GB9c：`InCB=Linker InCB=Extend* × InCB=Consonant`，不再要求前面必须有另一个辅音；ZWNJ 不作为该规则中的 InCB Extend。
+- [x] 对照官方 853 组用例运行逻辑等价检查：853/853 匹配，0 组差异。新增 JUnit 全量语料测试 `Unicode18GraphemeConformanceTest`，供 Android Gradle 单测重复执行。
+- [ ] 本轮尚未运行 Android Gradle/JUnit；853/853 是基于当前 Kotlin 算法等价逻辑与官方数据的独立对照结果，不代表 CI 或真机验收通过。
