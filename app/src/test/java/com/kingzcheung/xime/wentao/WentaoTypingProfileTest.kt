@@ -49,6 +49,7 @@ class WentaoTypingProfileTest {
         assertEquals(1_200_000_000L, WentaoTypingPacing.nextDelayNanos("，", profile))
         assertEquals(1_800_000_000L, WentaoTypingPacing.nextDelayNanos("；", profile))
         assertEquals(2_400_000_000L, WentaoTypingPacing.nextDelayNanos("。", profile))
+        assertEquals(2_400_000_000L, WentaoTypingPacing.nextDelayNanos(".", profile))
         assertEquals(3_000_000_000L, WentaoTypingPacing.nextDelayNanos("\\n", profile))
     }
 }
