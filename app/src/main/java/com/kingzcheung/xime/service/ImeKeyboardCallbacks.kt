@@ -13,6 +13,7 @@ import com.kingzcheung.xime.ui.keyboard.KeyboardCallbacks
 import com.kingzcheung.xime.ui.keyboard.DeleteDragSession
 import com.kingzcheung.xime.ui.keyboard.isT9Schema
 import com.kingzcheung.xime.util.FileLogger
+import com.kingzcheung.xime.wentao.WentaoTypingProfile
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
@@ -211,12 +212,7 @@ internal fun rememberImeKeyboardCallbacks(
                 when {
                     service.sequentialInputController.isRunning -> service.sequentialInputController.pause()
                     service.sequentialInputController.isPaused -> service.sequentialInputController.resume()
-                    else -> {
-                        service.sequentialInputMode = !service.sequentialInputMode
-                        android.widget.Toast.makeText(service,
-                            if (service.sequentialInputMode) "已开启逐字输入：选择一条剪贴板文字即可逐字发送" else "已关闭逐字输入",
-                            android.widget.Toast.LENGTH_SHORT).show()
-                    }
+                    else -> showWentaoTypingOptions(service)
                 }
             },
             onSequentialInputStop = {
@@ -682,3 +678,58 @@ private fun spaceCursorSelecting(service: XimeInputMethodService): Boolean =
 /** 数字面板上的 . / 是数字和运算符，不当方案编码键（#87）。 */
 private fun numberPanelShown(service: XimeInputMethodService): Boolean =
     service.keyboardViewModel.keyboardState.value is com.kingzcheung.xime.ui.keyboard.KeyboardLayoutState.Number
+
+
+/** 逐字输入速度与随机间隔设置；普通粘贴路径不受影响。 */
+private fun showWentaoTypingOptions(service: XimeInputMethodService) {
+    val controller = service.sequentialInputController
+    val presets = WentaoTypingProfile.Preset.entries
+    val customIndex = presets.size
+    val labels = presets.map { it.title } + "自定义速度…"
+    val selected = presets.indexOfFirst { it.charactersPerHour == controller.profile.charactersPerHour }
+    android.app.AlertDialog.Builder(service)
+        .setTitle("逐字输入速度")
+        .setSingleChoiceItems(labels.toTypedArray(), selected) { dialog, which ->
+            if (which == customIndex) {
+                dialog.dismiss()
+                val input = android.widget.EditText(service).apply {
+                    inputType = android.text.InputType.TYPE_CLASS_NUMBER
+                    hint = "输入每小时字符数"
+                    setText(controller.profile.charactersPerHour.toString())
+                    setSelection(text.length)
+                }
+                android.app.AlertDialog.Builder(service)
+                    .setTitle("自定义速度")
+                    .setMessage("输入每小时输出的字符数，不限制预设档位上限。")
+                    .setView(input)
+                    .setPositiveButton("确定") { _, _ ->
+                        val rate = input.text.toString().trim().toLongOrNull()
+                        if (rate == null || rate <= 0L) {
+                            android.widget.Toast.makeText(service, "请输入大于 0 的数字", android.widget.Toast.LENGTH_SHORT).show()
+                        } else {
+                            controller.setProfile(WentaoTypingProfile.custom(rate))
+                            service.sequentialInputMode = true
+                            android.widget.Toast.makeText(service, "已启用自定义速度：每小时 $rate 字", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    .setNegativeButton("取消", null)
+                    .show()
+            } else {
+                val profile = WentaoTypingProfile.preset(presets[which])
+                controller.setProfile(profile)
+                service.sequentialInputMode = true
+                dialog.dismiss()
+                android.widget.Toast.makeText(service, "已启用逐字输入：${profile.label}", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+        .setNeutralButton(if (controller.randomIntervals) "随机间隔：开" else "随机间隔：关") { _, _ ->
+            controller.setRandomIntervals(!controller.randomIntervals)
+            android.widget.Toast.makeText(
+                service,
+                if (controller.randomIntervals) "已开启随机间隔" else "已关闭随机间隔",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+        }
+        .setNegativeButton("取消", null)
+        .show()
+}
