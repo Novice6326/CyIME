@@ -20,6 +20,8 @@ object WentaoTypingText {
                 isExtend(codePoint) ||
                     codePoint == ZERO_WIDTH_JOINER ||
                     previousCodePoint == ZERO_WIDTH_JOINER ||
+                    isPrepend(previousCodePoint) ||
+                    isIndicConjunctContinuation(cluster, codePoint) ||
                     isHangulContinuation(previousCodePoint, codePoint) ||
                     (previousCodePoint == CARRIAGE_RETURN && codePoint == LINE_FEED) ||
                     (isRegionalIndicator(codePoint) &&
