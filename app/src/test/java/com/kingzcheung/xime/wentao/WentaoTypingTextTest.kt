@@ -58,6 +58,14 @@ class WentaoTypingTextTest {
     }
 
     @Test
+    fun doesNotTreatIndicIndependentVowelsAsConjunctConsonants() {
+        assertEquals(
+            listOf("क्", "अ"),
+            WentaoTypingText.splitCharacters("क्अ")
+        )
+    }
+
+    @Test
     fun keepsPrependCharactersWithTheirFollowingText() {
         assertEquals(
             listOf("\u0600A", "B"),
