@@ -110,11 +110,12 @@ object WentaoTypingText {
         return inIndicBlock && Character.isLetter(codePoint)
     }
 
-    private fun isIndicLinker(codePoint: Int): Boolean = codePoint in setOf(
+    private fun isIndicLinker(codePoint: Int): Boolean = when (codePoint) {
         0x094D, 0x09CD, 0x0ACD, 0x0B4D, 0x0C4D, 0x0D4D, 0x1039, 0x17D2,
         0x1A60, 0x1B44, 0x1BAB, 0x1CF5, 0x1CF6, 0xA9C0, 0xAAF6, 0x10A3F,
-        0x11133, 0x113D0, 0x1193E, 0x11A3A, 0x11A47, 0x11A99, 0x11F42
-    )
+        0x11133, 0x113D0, 0x1193E, 0x11A3A, 0x11A47, 0x11A99, 0x11F42 -> true
+        else -> false
+    }
 
     private fun isRegionalIndicator(codePoint: Int): Boolean =
         codePoint in 0x1F1E6..0x1F1FF
@@ -127,7 +128,8 @@ object WentaoTypingText {
         val previousType = hangulType(previous)
         val currentType = hangulType(current)
         return when (previousType) {
-            HangulType.L -> currentType in setOf(HangulType.L, HangulType.V, HangulType.LV, HangulType.LVT)
+            HangulType.L -> currentType == HangulType.L || currentType == HangulType.V ||
+                currentType == HangulType.LV || currentType == HangulType.LVT
             HangulType.LV, HangulType.V -> currentType == HangulType.V || currentType == HangulType.T
             HangulType.LVT, HangulType.T -> currentType == HangulType.T
             HangulType.OTHER -> false
