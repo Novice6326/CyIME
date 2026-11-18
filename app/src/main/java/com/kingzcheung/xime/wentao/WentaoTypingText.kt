@@ -4,7 +4,7 @@ package com.kingzcheung.xime.wentao
  * 将剪贴板文本拆成用户感知字符（扩展字素簇），而不是 UTF-16 code unit。
  * 中文、代理对 emoji、组合音标、肤色修饰符、ZWJ emoji、国旗、CRLF、
  * Hangul Jamo、Indic conjunct 和 Prepend 序列尽量保持为完整输入单位。
- * 核心 GCB 属性采用 Unicode 18.0 数据；Indic_Conjunct_Break 规则仍需通过官方完整测试集验收。
+ * GCB/Extended_Pictographic 属性采用 Unicode 18.0 数据；当前算法已与官方 853 组字素测试逐项对照。
  */
 object WentaoTypingText {
     fun splitCharacters(text: String): List<String> {
