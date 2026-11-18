@@ -222,3 +222,13 @@
 - 新增 SequentialEditorPolicyTest，覆盖“新会话即使指纹相同也不保留”“仅匹配的 restart 保留”“fieldId 必须为正数”。
 
 安全边界：EditorInfo 并非全局唯一的 View 句柄；完整指纹只是降低误匹配概率。正数 fieldId 也可能在不同 Activity/页面复用，因此恢复仍保持暂停，必须由用户手动继续。不同应用和无 ID 编辑器的真机验证尚未完成。
+
+
+### 第六轮补充：Unicode 属性纠错与断点恢复边界（2026-11-18）
+
+- 按 Unicode 18.0.0 官方 GraphemeBreakProperty.txt 校正 Prepend 属性：补入 U+113D1，移除错误归入 Prepend 的 U+13430..U+1343F（该段实际为 Control）。新增回归测试覆盖两类情况。
+- 按 Unicode 18.0.0 DerivedCoreProperties.txt 的 InCB=Consonant 精确区间替换此前过宽的脚本区段 + Character.isLetter 判断，避免把独立元音等非 InCB 辅音错误拼进 GB9c 连写簇。
+- 增加包含 ZWJ 的 Indic conjunct 用例；InCB=Extend 明确包含 U+200D。
+- 修正 GB11：ZWJ 后只有 Extended_Pictographic 才能继续 emoji ZWJ 序列；普通字符不会因前一个字符是 ZWJ 而被错误合并。常见 Extended_Pictographic 区间仍是精简近似，未导入完整 emoji-data 属性表。
+- 断点恢复进一步收紧：只有 restarting=true、有效正数 fieldId 和完整 EditorInfo 指纹匹配才恢复，且恢复后暂停；普通新输入会话清除断点。进程被杀后未必收到同编辑器 restart，因此不承诺跨进程无条件恢复。
+- 依据 Unicode 18.0.0 官方 UAX #29、GraphemeBreakProperty.txt 和 DerivedCoreProperties.txt；官方完整 GraphemeBreakTest.txt 尚未集成，不能宣称全量一致性。
