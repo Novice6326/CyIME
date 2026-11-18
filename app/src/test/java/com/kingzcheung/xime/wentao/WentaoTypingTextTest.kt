@@ -26,6 +26,14 @@ class WentaoTypingTextTest {
     }
 
     @Test
+    fun keepsHangulJamoAndKeycapEmojiIntact() {
+        assertEquals(
+            listOf("한", "❤️", "1️⃣", "끝"),
+            WentaoTypingText.splitCharacters("한❤️1️⃣끝")
+        )
+    }
+
+    @Test
     fun handlesEmptyText() {
         assertEquals(emptyList<String>(), WentaoTypingText.splitCharacters(""))
     }
