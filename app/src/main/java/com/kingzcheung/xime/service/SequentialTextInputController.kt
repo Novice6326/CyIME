@@ -12,6 +12,13 @@ import com.kingzcheung.xime.wentao.WentaoTypingProfile
 import com.kingzcheung.xime.wentao.WentaoTypingText
 import kotlin.random.Random
 
+internal object SequentialEditorPolicy {
+    fun shouldKeepActiveTask(restarting: Boolean, editorMatches: Boolean): Boolean =
+        restarting && editorMatches
+
+    fun hasStableFieldId(fieldId: Int): Boolean = fieldId > 0
+}
+
 data class SequentialInputProgress(
     val committed: Int = 0,
     val total: Int = 0,
@@ -194,7 +201,10 @@ internal class SequentialTextInputController(
             // EditorInfo fields can collide across different views in the same app.
             // Keep an in-memory task only when Android explicitly reports a restart
             // of the same editor; a normal new input session always invalidates it.
-            if (restarting && currentTarget != null && currentTarget.matches(editor)) {
+            if (SequentialEditorPolicy.shouldKeepActiveTask(
+                    restarting = restarting,
+                    editorMatches = currentTarget != null && currentTarget.matches(editor)
+                )) {
                 return true
             }
             stop()
@@ -330,7 +340,7 @@ internal class SequentialTextInputController(
     ) {
         // Persistent recovery is refused when Android did not provide a real View ID.
         // A package/type-only match is not enough to prove that this is the same field.
-        val isStableForRecovery: Boolean get() = fieldId > 0
+        val isStableForRecovery: Boolean get() = SequentialEditorPolicy.hasStableFieldId(fieldId)
 
         fun matches(editor: EditorInfo): Boolean =
             packageName.isNotBlank() && inputType != 0 &&
