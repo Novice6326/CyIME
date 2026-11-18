@@ -5170,7 +5170,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     }
 
     override fun onDestroy() {
-        // Detach the main-thread typing callback but preserve its checkpoint for safe manual resume.
+        // Detach the main-thread typing callback and persist the pause point. The controller
+        // only restores it when Android reports a matching editor restart; ordinary new
+        // input sessions invalidate the checkpoint to avoid writing into a different field.
         sequentialInputController.pause()
         runCatching {
             (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager)
