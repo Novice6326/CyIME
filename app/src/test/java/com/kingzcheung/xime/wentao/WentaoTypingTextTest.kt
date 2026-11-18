@@ -20,8 +20,8 @@ class WentaoTypingTextTest {
     @Test
     fun keepsCombiningMarksAndCrLfIntact() {
         assertEquals(
-            listOf("é", "\\r\\n", "x"),
-            WentaoTypingText.splitCharacters("é\\r\\nx")
+            listOf("é", "\r\n", "x"),
+            WentaoTypingText.splitCharacters("é\r\nx")
         )
     }
 
