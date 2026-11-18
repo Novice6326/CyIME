@@ -263,3 +263,13 @@
 - yuyansdk 的 T9TextContainer 依赖旧式 View / RecyclerView / Rime DictDecoder。当前工程已具备 Rime 九键与独立 Compose 键盘，不移植整个容器；只将其九键候选侧栏和符号交互作为体验对照。
 - 上游 yuyansdk 根目录 LICENSE 为 BSD 3-Clause 条款；但 src/main/assets/hw/rec.nb（约 16.7 MB）模型权重和 ocrv5.txt 字典的单独来源、许可与再分发权尚未得到独立证明。源代码许可证不能自动覆盖模型和数据，因此不复制这些二进制资源。
 - 上游项目引用的代码与资源必须按固定 commit 审查，不能跟随 master 自动更新。
+
+
+### 第十轮补充：Unicode 18.0 官方字素测试集对照
+
+- 新增官方 Unicode 18.0.0 GraphemeBreakTest.txt（853 组）、GraphemeBreakProperty.txt、emoji-data.txt 测试资源，并新增 JUnit 全量测试入口。
+- 由官方属性文件生成 GCB Control/Extend/Prepend/SpacingMark/Regional_Indicator/Hangul 与 Extended_Pictographic 范围表，运行时不再依赖 JDK Character.getType() 的 Unicode 版本。
+- 首轮对照暴露 CR/LF 被误当普通字符、GB9c 仍沿用旧规则以及 ZWNJ 被误当 Indic Extend 三类问题，均已修正。
+- Unicode 18.0 Revision 49 的 GB9c 已改为 `InCB=Linker InCB=Extend* × InCB=Consonant`；本轮按新规则修正后，独立逻辑对照结果为 853/853，0 mismatches。
+- 该结果不是 Android Gradle/JUnit 执行记录；全量 JUnit 测试已提交，仍需 CI 执行确认。真机逐字输入仍需覆盖实际输入框、光标、组合输入与应用切换。
+- 依据 Unicode 官方 UAX #29 Revision 49、UCD 18.0.0 数据文件及其测试语料。
