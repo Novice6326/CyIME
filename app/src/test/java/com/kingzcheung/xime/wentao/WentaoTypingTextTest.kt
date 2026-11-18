@@ -34,6 +34,22 @@ class WentaoTypingTextTest {
     }
 
     @Test
+    fun doesNotTreatArbitraryTextAfterZwjAsEmojiSequence() {
+        assertEquals(
+            listOf("a‍", "b"),
+            WentaoTypingText.splitCharacters("a‍b")
+        )
+    }
+
+    @Test
+    fun keepsEmojiZwjSequenceTogetherWhenPictographic() {
+        assertEquals(
+            listOf("👩‍💻", "x"),
+            WentaoTypingText.splitCharacters("👩‍💻x")
+        )
+    }
+
+    @Test
     fun keepsIndicConjunctSequencesTogether() {
         assertEquals(
             listOf("क्ष", "क़", "த", "மி", "ழ்"),
