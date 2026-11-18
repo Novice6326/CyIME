@@ -96,21 +96,18 @@ object WentaoTypingText {
         Unicode18GraphemeProperties.isPrepend(codePoint)
 
     /**
-     * Approximation of GB9c for common Indic conjuncts. Linker and consonant properties
-     * use the Unicode 18.0 Indic_Conjunct_Break code point lists; Extend is approximated
-     * using the general grapheme Extend predicate plus ZWJ.
+     * Unicode 18.0 GB9c: InCB=Linker InCB=Extend* × InCB=Consonant.
+     * The updated rule intentionally does not require a preceding consonant.
      */
     private fun isIndicConjunctContinuation(cluster: StringBuilder, current: Int): Boolean {
         if (!isIndicConsonant(current)) return false
         var offset = cluster.length
-        var foundLinker = false
         while (offset > 0) {
             val codePoint = Character.codePointBefore(cluster, offset)
             offset -= Character.charCount(codePoint)
             when {
-                isIndicLinker(codePoint) -> foundLinker = true
+                isIndicLinker(codePoint) -> return true
                 isIndicExtend(codePoint) -> Unit
-                isIndicConsonant(codePoint) -> return foundLinker
                 else -> return false
             }
         }
