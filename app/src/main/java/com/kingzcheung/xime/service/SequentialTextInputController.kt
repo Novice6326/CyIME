@@ -17,6 +17,9 @@ internal object SequentialEditorPolicy {
         restarting && editorMatches
 
     fun hasStableFieldId(fieldId: Int): Boolean = fieldId > 0
+
+    fun shouldRestoreCheckpoint(restarting: Boolean, fieldIdStable: Boolean, editorMatches: Boolean): Boolean =
+        restarting && fieldIdStable && editorMatches
 }
 
 data class SequentialInputProgress(
@@ -188,8 +191,9 @@ internal class SequentialTextInputController(
     }
 
     /**
-     * Called after InputMethodService.onStartInput. A same-field task remains resumable;
-     * a different field invalidates it. A persisted task is restored paused, never auto-typed.
+     * Called after InputMethodService.onStartInput. A same-field restart may retain or
+     * restore a task; a normal new input session invalidates all prior task state.
+     * A persisted task is restored paused, never auto-typed.
      */
     fun onEditorStarted(editor: EditorInfo?, restarting: Boolean): Boolean {
         if (editor == null || isSensitive(editor.inputType)) {
@@ -209,6 +213,12 @@ internal class SequentialTextInputController(
                 return true
             }
             stop()
+        }
+        // A persisted EditorInfo fingerprint is not a globally unique view handle.
+        // Never restore it on an ordinary new input session, even if its fields match.
+        if (!restarting) {
+            clearCheckpoint()
+            return false
         }
         return restoreFor(editor)
     }
@@ -230,8 +240,12 @@ internal class SequentialTextInputController(
         val index = checkpoint.getInt(KEY_INDEX, 0)
         val split = if (text.isNotEmpty()) WentaoTypingText.splitCharacters(text) else emptyList()
         if (text.isEmpty() || text.length > MAX_TEXT_LENGTH || split.isEmpty() ||
-            index !in 0 until split.size || !savedTarget.isStableForRecovery ||
-            !savedTarget.matches(editor)) {
+            index !in 0 until split.size ||
+            !SequentialEditorPolicy.shouldRestoreCheckpoint(
+                restarting = true,
+                fieldIdStable = savedTarget.isStableForRecovery,
+                editorMatches = savedTarget.matches(editor)
+            )) {
             clearCheckpoint()
             return false
         }
