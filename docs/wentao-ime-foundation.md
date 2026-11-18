@@ -52,3 +52,11 @@ CyIME 上游采用 GPL-3.0。基于该代码分发的文涛输入法版本必须
 - [x] 断点指纹增加 imeOptions、privateImeOptions、actionId、actionLabel、hintText 和 label，减少同应用不同输入框误匹配。
 - [x] 跨服务/进程恢复要求 fieldId 为正数；系统未提供有效 View ID 时宁可放弃跨服务恢复，也不使用包名和输入类型猜测目标。
 - [ ] 仍需在不同应用、Compose 输入框、无 ID 输入框、同布局 ID 复用场景验证恢复策略；EditorInfo 不是全局唯一控件句柄，持久化指纹只能降低误匹配，不能证明所有应用都唯一。
+
+
+## 断点恢复安全边界补充（2026-11-18）
+
+- [x] 持久化断点只有在 Android 明确报告 restarting=true、fieldId 为正数且完整 EditorInfo 指纹匹配时才恢复。
+- [x] 普通新输入会话不恢复磁盘断点，即使 packageName、fieldId、inputType 等字段碰巧相同也清除，避免跨输入框误续写。
+- [x] 恢复后仍处于暂停状态，必须由用户手动继续。
+- [ ] 因安全优先，进程被系统杀死后若 Android 未报告同一编辑器重启，断点可能被丢弃；不承诺跨进程、跨应用页面的无条件恢复。后续若要支持，需要单独设计带目标信息展示和用户二次确认的恢复流程。
