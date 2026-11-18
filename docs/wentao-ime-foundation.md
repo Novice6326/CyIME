@@ -23,7 +23,7 @@ CyIME 上游采用 GPL-3.0。基于该代码分发的文涛输入法版本必须
 - [x] 新增扩展字素簇拆分器及 JVM 单元测试。
 - [x] 将速度/文本模型接入 Android IME 当前 InputConnection，逐次提交前校验当前 EditorInfo。
 - [x] 接入工具栏开始/暂停/继续/停止入口；增加 9 档速度、自定义速度、随机间隔开关和候选栏上方实时进度。
-- [x] 实现私有 SharedPreferences 任务持久化和断点恢复；按 packageName、fieldId、inputType、fieldName 匹配，恢复后保持暂停。
+- [x] 实现私有 SharedPreferences 任务持久化和断点恢复；按 packageName、fieldId、inputType、fieldName 及 EditorInfo 操作/提示元数据匹配，恢复后保持暂停；无有效正数 fieldId 时拒绝跨服务恢复。
 - [ ] 完成 Android 工程编译、完整单元测试与真机多应用输入框验收。
 
 当前分支已写入速度模型、字素簇拆分、IME 控制器、目标输入框保护、断点恢复、速度设置和进度 UI。本轮尚未取得 Android 工程构建与完整测试通过的 CI 证据；此前对纯 Kotlin 逻辑的独立检查不能替代 Gradle 工程编译。当前只能标记为“代码已接入、待构建验收”，不能视为已完成交付。
@@ -44,3 +44,11 @@ CyIME 上游采用 GPL-3.0。基于该代码分发的文涛输入法版本必须
 - [x] 将 ZWNJ 纳入 Extend 类边界处理。
 - [x] 增加 Devanagari conjunct、组合标记、Prepend 和 ZWNJ 回归测试。
 - [ ] 仍需引入官方 GraphemeBreakTest.txt / DerivedCoreProperties.txt 自动化一致性测试，评估完整 UAX #29 覆盖率；当前实现是轻量近似，不应标记为 Unicode 全量合规。
+
+
+## 输入框身份保护补充（2026-11-18）
+
+- [x] 修正 `onStartInput` 处理：只有 Android 明确标记为 restarting 且 EditorInfo 指纹匹配时，才保留当前内存任务；普通新输入会话即使包名/控件 ID/输入类型碰巧相同，也会清除旧任务。
+- [x] 断点指纹增加 imeOptions、privateImeOptions、actionId、actionLabel、hintText 和 label，减少同应用不同输入框误匹配。
+- [x] 跨服务/进程恢复要求 fieldId 为正数；系统未提供有效 View ID 时宁可放弃跨服务恢复，也不使用包名和输入类型猜测目标。
+- [ ] 仍需在不同应用、Compose 输入框、无 ID 输入框、同布局 ID 复用场景验证恢复策略；EditorInfo 不是全局唯一控件句柄，持久化指纹只能降低误匹配，不能证明所有应用都唯一。
