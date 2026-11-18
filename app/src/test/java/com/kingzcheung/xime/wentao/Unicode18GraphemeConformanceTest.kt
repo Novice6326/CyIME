@@ -51,8 +51,8 @@ class Unicode18GraphemeConformanceTest {
 
         assertEquals("Unicode 18.0.0 test corpus case count changed", 853, cases)
         assertTrue(
-            "Unicode 18.0.0 grapheme mismatches (${mismatches.size}):\\n" +
-                mismatches.joinToString("\\n"),
+            "Unicode 18.0.0 grapheme mismatches (${mismatches.size}):\n" +
+                mismatches.joinToString("\n"),
             mismatches.isEmpty()
         )
     }
