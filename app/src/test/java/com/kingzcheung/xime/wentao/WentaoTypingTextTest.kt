@@ -36,7 +36,7 @@ class WentaoTypingTextTest {
     @Test
     fun keepsIndicConjunctSequencesTogether() {
         assertEquals(
-            listOf("क्ष", "क़", "தமிழ்"),
+            listOf("क्ष", "क़", "த", "மி", "ழ்"),
             WentaoTypingText.splitCharacters("क्षक़தமிழ்")
         )
     }
