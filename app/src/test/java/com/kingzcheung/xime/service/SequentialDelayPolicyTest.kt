@@ -29,6 +29,14 @@ class SequentialDelayPolicyTest {
         assertEquals(0L, SequentialDelayPolicy.toDelayMillis(0L))
     }
 
+    @Test
+    fun safelyConvertsVeryLargeIntervalsWithoutOverflow() {
+        assertEquals(
+            9_223_372_036_855L,
+            SequentialDelayPolicy.toDelayMillis(Long.MAX_VALUE)
+        )
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun rejectsNegativeDelay() {
         SequentialDelayPolicy.toDelayMillis(-1L)
