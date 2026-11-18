@@ -31,7 +31,8 @@ data class SequentialInputProgress(
  * 把剪贴板文本逐个用户感知字符提交到当前编辑器。
  *
  * 每次提交前重新核对 EditorInfo 与目标快照；输入框切换、连接失效或密码框均不会继续写入。
- * 任务文本、位置和目标身份保存在私有 SharedPreferences，只有同一目标重新获得焦点时才允许恢复。
+ * 任务文本、位置和 EditorInfo 指纹保存在私有 SharedPreferences；跨服务恢复要求正数 fieldId，
+ * 并且只在显式 restartInput 且指纹匹配时保留内存任务。持久化指纹不是全局唯一控件句柄。
  */
 @MainThread
 internal class SequentialTextInputController(
