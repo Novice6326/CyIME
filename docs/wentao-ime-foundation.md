@@ -14,7 +14,7 @@ CyIME 上游采用 GPL-3.0。基于该代码分发的文涛输入法版本必须
 - 语音结果必须通过当前 IME 服务持有的当前 InputConnection 提交；不能跳转到输入法设置/主界面，也不能使用过期连接。
 - 对每次逐字提交重新校验目标应用、输入框身份与连接状态；切换输入框时暂停，不能把剩余文本泄漏到另一个字段。
 - 逐字速度预设为 9 档（6,000–30,000 字/小时），并支持自定义速度、随机间隔、标点停顿、暂停/继续/停止、进度与安全断点恢复。自定义输入值不设预设上限，但调度间隔最低 1ms，实际输出速度受设备调度精度约束。
-- 逐字单位按扩展字素簇近似拆分，不能拆开代理对、组合字符、旗帜、ZWJ emoji、韩文 Jamo 连写；当前实现另覆盖常见 Indic conjunct 与 Prepend 字符，但尚未声明完整符合 Unicode UAX #29。
+- 逐字单位按扩展字素簇拆分，使用 Unicode 18.0 GCB 与 Extended_Pictographic 属性表，覆盖代理对、组合字符、旗帜、ZWJ emoji、韩文 Jamo、Prepend 与 Indic GB9c；官方 853 组 GraphemeBreakTest 已完成独立逻辑对照，Android JUnit/Gradle 尚待执行。
 
 ## 第一阶段状态
 
@@ -40,10 +40,10 @@ CyIME 上游采用 GPL-3.0。基于该代码分发的文涛输入法版本必须
 ## Unicode 字符边界补充（2026-11-18）
 
 - [x] 增加 Unicode Prepend（GB9b）常见范围处理。
-- [x] 增加 Indic conjunct（GB9c）轻量处理：使用 Unicode 18.0 的 InCB Linker 代码点清单，并结合 Indic 脚本字母范围识别连写辅音。
+- [x] 按 Unicode 18.0 Revision 49 实现 GB9c：InCB=Linker InCB=Extend* × InCB=Consonant。
 - [x] 将 ZWNJ 纳入 Extend 类边界处理。
 - [x] 增加 Devanagari conjunct、组合标记、Prepend 和 ZWNJ 回归测试。
-- [ ] 仍需引入官方 GraphemeBreakTest.txt / DerivedCoreProperties.txt 自动化一致性测试，评估完整 UAX #29 覆盖率；当前实现是轻量近似，不应标记为 Unicode 全量合规。
+- [x] 引入官方 GraphemeBreakTest.txt 自动化一致性测试，并完成 853/853 组独立逻辑对照；完整 Android JUnit/Gradle 执行仍待验收。
 
 
 ## 输入框身份保护补充（2026-11-18）
