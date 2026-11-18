@@ -71,7 +71,7 @@ data class WentaoTypingProfile private constructor(
 object WentaoTypingPacing {
     fun punctuationMultiplier(character: String): Int = when {
         character.any { it == '\\n' || it == '\\r' } -> 5
-        character.any { it in "。！？!?" } -> 4
+        character.any { it in "。！？.!?…" } -> 4
         character.any { it in "；;：:" } -> 3
         character.any { it in "，、," } -> 2
         else -> 1
