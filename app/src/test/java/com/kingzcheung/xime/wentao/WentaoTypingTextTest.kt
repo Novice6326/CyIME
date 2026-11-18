@@ -58,6 +58,14 @@ class WentaoTypingTextTest {
     }
 
     @Test
+    fun keepsIndicConjunctWithViramaAndZwjTogether() {
+        assertEquals(
+            listOf("क्‍ष"),
+            WentaoTypingText.splitCharacters("क्‍ष")
+        )
+    }
+
+    @Test
     fun doesNotTreatIndicIndependentVowelsAsConjunctConsonants() {
         assertEquals(
             listOf("क्", "अ"),
