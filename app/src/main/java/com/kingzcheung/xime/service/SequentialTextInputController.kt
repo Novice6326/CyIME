@@ -208,12 +208,19 @@ internal class SequentialTextInputController(
             packageName = checkpoint.getString(KEY_PACKAGE, "").orEmpty(),
             fieldId = checkpoint.getInt(KEY_FIELD_ID, 0),
             inputType = checkpoint.getInt(KEY_INPUT_TYPE, 0),
-            fieldName = checkpoint.getString(KEY_FIELD_NAME, null)
+            fieldName = checkpoint.getString(KEY_FIELD_NAME, null),
+            imeOptions = checkpoint.getInt(KEY_IME_OPTIONS, 0),
+            privateImeOptions = checkpoint.getString(KEY_PRIVATE_IME_OPTIONS, null),
+            actionId = checkpoint.getInt(KEY_ACTION_ID, 0),
+            actionLabel = checkpoint.getString(KEY_ACTION_LABEL, null),
+            hintText = checkpoint.getString(KEY_HINT_TEXT, null),
+            label = checkpoint.getString(KEY_LABEL, null)
         )
         val index = checkpoint.getInt(KEY_INDEX, 0)
         val split = if (text.isNotEmpty()) WentaoTypingText.splitCharacters(text) else emptyList()
         if (text.isEmpty() || text.length > MAX_TEXT_LENGTH || split.isEmpty() ||
-            index !in 0 until split.size || !savedTarget.matches(editor)) {
+            index !in 0 until split.size || !savedTarget.isStableForRecovery ||
+            !savedTarget.matches(editor)) {
             clearCheckpoint()
             return false
         }
@@ -246,6 +253,12 @@ internal class SequentialTextInputController(
             .putInt(KEY_FIELD_ID, editorTarget.fieldId)
             .putInt(KEY_INPUT_TYPE, editorTarget.inputType)
             .putString(KEY_FIELD_NAME, editorTarget.fieldName)
+            .putInt(KEY_IME_OPTIONS, editorTarget.imeOptions)
+            .putString(KEY_PRIVATE_IME_OPTIONS, editorTarget.privateImeOptions)
+            .putInt(KEY_ACTION_ID, editorTarget.actionId)
+            .putString(KEY_ACTION_LABEL, editorTarget.actionLabel)
+            .putString(KEY_HINT_TEXT, editorTarget.hintText)
+            .putString(KEY_LABEL, editorTarget.label)
             .putLong(KEY_SPEED, profile.charactersPerHour)
             .putBoolean(KEY_CUSTOM_SPEED, profile.isCustom)
             .putBoolean(KEY_RANDOM, randomIntervals)
@@ -255,7 +268,9 @@ internal class SequentialTextInputController(
     private fun clearCheckpoint() {
         checkpoint.edit().remove(KEY_TEXT).remove(KEY_INDEX)
             .remove(KEY_PACKAGE).remove(KEY_FIELD_ID).remove(KEY_INPUT_TYPE)
-            .remove(KEY_FIELD_NAME).remove(KEY_SPEED).remove(KEY_CUSTOM_SPEED)
+            .remove(KEY_FIELD_NAME).remove(KEY_IME_OPTIONS).remove(KEY_PRIVATE_IME_OPTIONS)
+            .remove(KEY_ACTION_ID).remove(KEY_ACTION_LABEL).remove(KEY_HINT_TEXT).remove(KEY_LABEL)
+            .remove(KEY_SPEED).remove(KEY_CUSTOM_SPEED)
             .remove(KEY_RANDOM).apply()
     }
 
@@ -305,20 +320,47 @@ internal class SequentialTextInputController(
         val packageName: String,
         val fieldId: Int,
         val inputType: Int,
-        val fieldName: String?
+        val fieldName: String?,
+        val imeOptions: Int,
+        val privateImeOptions: String?,
+        val actionId: Int,
+        val actionLabel: String?,
+        val hintText: String?,
+        val label: String?
     ) {
+        // Persistent recovery is refused when Android did not provide a real View ID.
+        // A package/type-only match is not enough to prove that this is the same field.
+        val isStableForRecovery: Boolean get() = fieldId > 0
+
         fun matches(editor: EditorInfo): Boolean =
             packageName.isNotBlank() && inputType != 0 &&
                 packageName == editor.packageName &&
                 fieldId == editor.fieldId &&
                 inputType == editor.inputType &&
-                fieldName == editor.fieldName
+                fieldName == editor.fieldName &&
+                imeOptions == editor.imeOptions &&
+                privateImeOptions == editor.privateImeOptions &&
+                actionId == editor.actionId &&
+                actionLabel == editor.actionLabel?.toString() &&
+                hintText == editor.hintText?.toString() &&
+                label == editor.label?.toString()
 
         companion object {
             fun from(editor: EditorInfo): EditorTarget? {
                 val packageName = editor.packageName?.takeIf(String::isNotBlank) ?: return null
                 if (editor.inputType == 0) return null
-                return EditorTarget(packageName, editor.fieldId, editor.inputType, editor.fieldName)
+                return EditorTarget(
+                    packageName = packageName,
+                    fieldId = editor.fieldId,
+                    inputType = editor.inputType,
+                    fieldName = editor.fieldName,
+                    imeOptions = editor.imeOptions,
+                    privateImeOptions = editor.privateImeOptions,
+                    actionId = editor.actionId,
+                    actionLabel = editor.actionLabel?.toString(),
+                    hintText = editor.hintText?.toString(),
+                    label = editor.label?.toString()
+                )
             }
         }
     }
@@ -332,6 +374,12 @@ internal class SequentialTextInputController(
         private const val KEY_FIELD_ID = "field_id"
         private const val KEY_INPUT_TYPE = "input_type"
         private const val KEY_FIELD_NAME = "field_name"
+        private const val KEY_IME_OPTIONS = "ime_options"
+        private const val KEY_PRIVATE_IME_OPTIONS = "private_ime_options"
+        private const val KEY_ACTION_ID = "action_id"
+        private const val KEY_ACTION_LABEL = "action_label"
+        private const val KEY_HINT_TEXT = "hint_text"
+        private const val KEY_LABEL = "label"
         private const val KEY_SPEED = "speed"
         private const val KEY_CUSTOM_SPEED = "custom_speed"
         private const val KEY_RANDOM = "random"
