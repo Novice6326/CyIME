@@ -32,6 +32,38 @@ class SequentialEditorPolicyTest {
     }
 
     @Test
+    fun restoresCheckpointOnlyForExplicitMatchingEditorRestart() {
+        assertTrue(
+            SequentialEditorPolicy.shouldRestoreCheckpoint(
+                restarting = true,
+                fieldIdStable = true,
+                editorMatches = true
+            )
+        )
+        assertFalse(
+            SequentialEditorPolicy.shouldRestoreCheckpoint(
+                restarting = false,
+                fieldIdStable = true,
+                editorMatches = true
+            )
+        )
+        assertFalse(
+            SequentialEditorPolicy.shouldRestoreCheckpoint(
+                restarting = true,
+                fieldIdStable = false,
+                editorMatches = true
+            )
+        )
+        assertFalse(
+            SequentialEditorPolicy.shouldRestoreCheckpoint(
+                restarting = true,
+                fieldIdStable = true,
+                editorMatches = false
+            )
+        )
+    }
+
+    @Test
     fun requiresPositiveViewIdForPersistentRecovery() {
         assertFalse(SequentialEditorPolicy.hasStableFieldId(0))
         assertFalse(SequentialEditorPolicy.hasStableFieldId(-1))
