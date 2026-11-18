@@ -162,3 +162,34 @@
 - 本轮另修正逐字输入生命周期：`onFinishInput` 与 `onDestroy` 都会暂停调度并保留断点；仍需真机验证系统不同输入法生命周期回调顺序。
 
 因此，当前语音输入并非完全没有目标保护；后续应以现有实现和测试为基准做补充测试，不应重复造一套语音目标路由。
+
+
+### 第三轮补充：许可证交叉核对与逐字字符边界（2026-11-18）
+
+#### Feelime 许可证必须以当前 LICENSE 文件为准
+
+本轮直接读取 Feelime 当前 `main` 分支的 `LICENSE` 和 `README.md`：
+- 当前顶层 `LICENSE` 正文是 GNU GPL version 3。
+- 当前 README 明确写明“1.0.19 及之前的历史版本以 MIT 发布”，当前版本使用 GPL-3.0。
+- 部分 GitHub 页面摘要仍显示 MIT，不能以摘要覆盖当前许可证文件。
+
+结论：当前 Feelime 代码按 GPL-3.0 进行合规审查；若只研究历史 MIT 版本，必须固定到 1.0.19 或更早的具体 tag/commit，并核对该版本源码、词库、模型和 NOTICE。当前模型权重、词库及第三方模型依然必须分别核验授权，不能因源码 GPL 就推断模型也 GPL 或可再分发。
+
+当前工程主项目也是 GPL-3.0，但这不代表可以忽略上游版权、修改标记、许可证副本、第三方模型和数据授权。当前不直接复制 Feelime 的 ASR 实现：现有工程已有自己的 streaming + finalization + SecondPassGate 流程，必须先用同一套音频数据对比 CER、首字延迟、停顿定稿时间和端侧内存。
+
+#### YuyanIme 顶层许可证已核实
+
+当前 `gurecn/YuyanIme` 的 `master:LICENSE` 是 BSD 3-Clause 风格条款，包含保留版权/许可/免责声明以及不得未经许可使用作者或贡献者名称背书等要求。移植代码时保留原始 LICENSE 文本与版权声明，不仅仅在 NOTICE 中写“BSD”。
+
+#### 逐字输入：补齐 Hangul Jamo 字素簇边界
+
+源码审查发现 `WentaoTypingText` 已处理代理对、组合标记、变体选择符、肤色修饰符、ZWJ emoji、国旗、标签字符和 CRLF，但此前没有处理韩文分解式 Hangul Jamo 的 GB6–GB8 连写规则。已增加 Hangul L/V/T、LV/LVT 组合判断，并新增测试：
+- `한` 必须作为一个用户感知字符提交；
+- `❤️`、`1️⃣` 等 Emoji 变体和键帽序列不得拆开；
+- 原有家庭 ZWJ Emoji、肤色修饰符、国旗和 CRLF 测试继续保留。
+
+这仍是轻量级字素簇分割实现，不宣称已经覆盖 Unicode UAX #29 的全部规则；后续还需增加印度文字 virama/conjunct、prepend 字符等测试。不得将“常见 emoji 测试通过”描述为“完整 Unicode 字素算法已通过”。
+
+#### 构建与 CI 现状
+
+当前分支有 `.github/workflows/build.yml`（push 到 main/dev* 会触发构建）和 `.github/workflows/test.yml`（手动触发完整单测，可选 instrumentation）。但查询当前分支 Actions runs 未返回任何运行记录，因此本轮不能报告 Gradle 构建或测试通过。build.yml 中单元测试步骤当前设置为 `continue-on-error: true`，即使失败也不会阻断后续 APK 构建；完整验证应以 test.yml 的单测结果和可选设备测试结果为准。
