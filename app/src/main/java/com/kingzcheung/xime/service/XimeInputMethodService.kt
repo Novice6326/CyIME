@@ -3352,6 +3352,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     private val ctrlEnterKeys = mutableSetOf<Int>()
     internal val sequentialInputModeState = androidx.compose.runtime.mutableStateOf(false)
     internal val sequentialInputProgressState = androidx.compose.runtime.mutableStateOf(SequentialInputProgress())
+    internal val sequentialInputProgressTextState = androidx.compose.runtime.mutableStateOf("")
     internal var sequentialInputMode: Boolean
         get() = sequentialInputModeState.value
         set(value) { sequentialInputModeState.value = value }
@@ -3362,6 +3363,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             checkpoint = getSharedPreferences("wentao_sequential_typing", MODE_PRIVATE),
             onProgress = { committed, total, running ->
                 sequentialInputProgressState.value = SequentialInputProgress(committed, total, running)
+                sequentialInputProgressTextState.value =
+                    if (total > 0) "逐字输入：$committed / $total（${committed * 100 / total}%）" else ""
             },
             onFinished = { success ->
                 android.widget.Toast.makeText(this,
