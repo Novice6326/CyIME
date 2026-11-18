@@ -17,17 +17,22 @@ object WentaoTypingText {
 
         while (offset < text.length) {
             val codePoint = text.codePointAt(offset)
+            val isCrLf = previousCodePoint == CARRIAGE_RETURN && codePoint == LINE_FEED
             val attach = cluster.isNotEmpty() && (
-                isExtend(codePoint) ||
-                    codePoint == ZERO_WIDTH_JOINER ||
-                    isEmojiZwjContinuation(cluster, codePoint) ||
-                    isPrepend(previousCodePoint) ||
-                    isIndicConjunctContinuation(cluster, codePoint) ||
-                    isHangulContinuation(previousCodePoint, codePoint) ||
-                    (previousCodePoint == CARRIAGE_RETURN && codePoint == LINE_FEED) ||
-                    (isRegionalIndicator(codePoint) &&
-                        isRegionalIndicator(previousCodePoint) &&
-                        regionalIndicatorCount % 2 == 1)
+                isCrLf || (
+                    !isGraphemeControl(previousCodePoint) &&
+                        !isGraphemeControl(codePoint) && (
+                            isExtend(codePoint) ||
+                                codePoint == ZERO_WIDTH_JOINER ||
+                                isEmojiZwjContinuation(cluster, codePoint) ||
+                                isPrepend(previousCodePoint) ||
+                                isIndicConjunctContinuation(cluster, codePoint) ||
+                                isHangulContinuation(previousCodePoint, codePoint) ||
+                                (isRegionalIndicator(codePoint) &&
+                                    isRegionalIndicator(previousCodePoint) &&
+                                    regionalIndicatorCount % 2 == 1)
+                            )
+                    )
                 )
 
             if (!attach && cluster.isNotEmpty()) {
@@ -108,6 +113,29 @@ object WentaoTypingText {
             codePoint == 0x2B55 || codePoint == 0x3030 ||
             codePoint == 0x303D || codePoint == 0x3297 ||
             codePoint == 0x3299
+
+    /** GCB=Control ranges from Unicode 18.0 GraphemeBreakProperty.txt. */
+    private fun isGraphemeControl(codePoint: Int): Boolean =
+        codePoint in 0x0000..0x0009 ||
+            codePoint in 0x000B..0x000C ||
+            codePoint in 0x000E..0x001F ||
+            codePoint in 0x007F..0x009F ||
+            codePoint == 0x00AD ||
+            codePoint == 0x061C ||
+            codePoint == 0x180E ||
+            codePoint == 0x200B ||
+            codePoint in 0x200E..0x200F ||
+            codePoint in 0x2028..0x202E ||
+            codePoint in 0x2060..0x206F ||
+            codePoint == 0xFEFF ||
+            codePoint in 0xFFF0..0xFFFB ||
+            codePoint in 0x13430..0x1343F ||
+            codePoint in 0x1BCA0..0x1BCA3 ||
+            codePoint in 0x1D173..0x1D17A ||
+            codePoint in 0xE0000..0xE0001 ||
+            codePoint in 0xE0002..0xE001F ||
+            codePoint in 0xE0080..0xE00FF ||
+            codePoint in 0xE01F0..0xE0FFF
 
     /** GB9b: a Prepend character remains attached to the following character. */
     private fun isPrepend(codePoint: Int): Boolean =
