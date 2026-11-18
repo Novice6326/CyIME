@@ -47,6 +47,17 @@ internal class SequentialTextInputController(
     var randomIntervals: Boolean = true
         private set
 
+    init {
+        val savedSpeed = checkpoint.getLong(KEY_CONFIG_SPEED, profile.charactersPerHour).coerceAtLeast(1L)
+        profile = if (checkpoint.getBoolean(KEY_CONFIG_CUSTOM, false)) {
+            WentaoTypingProfile.custom(savedSpeed)
+        } else {
+            WentaoTypingProfile.Preset.entries.firstOrNull { it.charactersPerHour == savedSpeed }
+                ?.let(WentaoTypingProfile::preset) ?: WentaoTypingProfile.custom(savedSpeed)
+        }
+        randomIntervals = checkpoint.getBoolean(KEY_CONFIG_RANDOM, true)
+    }
+
     private val tick = object : Runnable {
         override fun run() {
             if (!active || paused) return
@@ -95,11 +106,16 @@ internal class SequentialTextInputController(
 
     fun setProfile(value: WentaoTypingProfile) {
         profile = value
+        checkpoint.edit()
+            .putLong(KEY_CONFIG_SPEED, value.charactersPerHour)
+            .putBoolean(KEY_CONFIG_CUSTOM, value.isCustom)
+            .apply()
         saveCheckpoint()
     }
 
     fun setRandomIntervals(enabled: Boolean) {
         randomIntervals = enabled
+        checkpoint.edit().putBoolean(KEY_CONFIG_RANDOM, enabled).apply()
         saveCheckpoint()
     }
 
@@ -107,7 +123,7 @@ internal class SequentialTextInputController(
         stop(notify = false)
         val editor = currentEditor()
         val connection = inputConnection()
-        if (text.isEmpty() || editor == null || connection == null ||
+        if (text.isEmpty() || text.length > MAX_TEXT_LENGTH || editor == null || connection == null ||
             editor.packageName.isNullOrBlank() || editor.inputType == 0 || isSensitive(editor.inputType)) {
             onProgress(0, 0, false)
             onFinished(false)
@@ -318,5 +334,8 @@ internal class SequentialTextInputController(
         private const val KEY_SPEED = "speed"
         private const val KEY_CUSTOM_SPEED = "custom_speed"
         private const val KEY_RANDOM = "random"
+        private const val KEY_CONFIG_SPEED = "config_speed"
+        private const val KEY_CONFIG_CUSTOM = "config_custom"
+        private const val KEY_CONFIG_RANDOM = "config_random"
     }
 }
