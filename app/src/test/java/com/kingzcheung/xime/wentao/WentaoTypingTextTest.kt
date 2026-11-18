@@ -66,6 +66,20 @@ class WentaoTypingTextTest {
     }
 
     @Test
+    fun handlesNewUnicode18PrependAndDoesNotTreatControlsAsPrepend() {
+        val tulutigalariRepha = String(Character.toChars(0x113D1))
+        val egyptianControl = String(Character.toChars(0x13430))
+        assertEquals(
+            listOf(tulutigalariRepha + "A", "B"),
+            WentaoTypingText.splitCharacters(tulutigalariRepha + "AB")
+        )
+        assertEquals(
+            listOf(egyptianControl, "A"),
+            WentaoTypingText.splitCharacters(egyptianControl + "A")
+        )
+    }
+
+    @Test
     fun keepsZeroWidthNonJoinerWithThePrecedingCluster() {
         assertEquals(
             listOf("क\u200C", "ष"),
