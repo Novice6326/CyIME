@@ -77,8 +77,7 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
         
-      - name: Run Unit Tests (non-blocking)
-        continue-on-error: true
+      - name: Run Unit Tests
         run: ./gradlew :app:testDebugUnitTest :plugin-core:testDebugUnitTest --no-daemon
         
       - name: Generate Test Report
