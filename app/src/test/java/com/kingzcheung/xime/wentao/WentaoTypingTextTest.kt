@@ -82,6 +82,14 @@ class WentaoTypingTextTest {
     }
 
     @Test
+    fun controlCharactersForceGraphemeBoundariesBeforeExtend() {
+        assertEquals(
+            listOf("\u0000", "́", "A"),
+            WentaoTypingText.splitCharacters("\u0000́A")
+        )
+    }
+
+    @Test
     fun handlesNewUnicode18PrependAndDoesNotTreatControlsAsPrepend() {
         val tulutigalariRepha = String(Character.toChars(0x113D1))
         val egyptianControl = String(Character.toChars(0x13430))
