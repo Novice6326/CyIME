@@ -80,3 +80,9 @@ CyIME 上游采用 GPL-3.0。基于该代码分发的文涛输入法版本必须
 - [x] 按 Unicode 18.0 Revision 49 更新 GB9c：`InCB=Linker InCB=Extend* × InCB=Consonant`，不再要求前面必须有另一个辅音；ZWNJ 不作为该规则中的 InCB Extend。
 - [x] 对照官方 853 组用例运行逻辑等价检查：853/853 匹配，0 组差异。新增 JUnit 全量语料测试 `Unicode18GraphemeConformanceTest`，供 Android Gradle 单测重复执行。
 - [ ] 本轮尚未运行 Android Gradle/JUnit；853/853 是基于当前 Kotlin 算法等价逻辑与官方数据的独立对照结果，不代表 CI 或真机验收通过。
+
+
+## CI 验收门禁调整（2026-11-18）
+
+- [x] 修改 `.github/workflows/build.yml`：移除单元测试步骤的 `continue-on-error: true`。从此单测失败会阻止后续 APK 打包步骤，避免出现“测试失败但仍上传 APK”的假绿灯。
+- [ ] 当前开发分支尚未出现 Actions run 记录，需等仓库实际执行后才能确认 CI 结果。
