@@ -3351,15 +3351,21 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     /** 实体键盘 Ctrl+回车、Shift+回车按下时已处理，抬起也不再交给应用。 */
     private val ctrlEnterKeys = mutableSetOf<Int>()
     internal val sequentialInputModeState = androidx.compose.runtime.mutableStateOf(false)
+    internal val sequentialInputProgressState = androidx.compose.runtime.mutableStateOf(SequentialInputProgress())
     internal var sequentialInputMode: Boolean
         get() = sequentialInputModeState.value
         set(value) { sequentialInputModeState.value = value }
     internal val sequentialInputController: SequentialTextInputController by lazy {
         SequentialTextInputController(
             inputConnection = { currentInputConnection },
+            currentEditor = { currentInputEditorInfo },
+            checkpoint = getSharedPreferences("wentao_sequential_typing", MODE_PRIVATE),
+            onProgress = { committed, total, running ->
+                sequentialInputProgressState.value = SequentialInputProgress(committed, total, running)
+            },
             onFinished = { success ->
                 android.widget.Toast.makeText(this,
-                    if (success) "逐字输入完成" else "逐字输入已中断",
+                    if (success) "逐字输入完成" else "逐字输入已暂停，请检查当前输入框后继续",
                     android.widget.Toast.LENGTH_SHORT).show()
             },
         )
@@ -3802,13 +3808,10 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
 
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         endGlidePreview()
-        // A fresh editor must not inherit a paced paste. Android marks an input restart for the
-        // same editor with restarting=true, so preserve the task and its checkpoint in that case.
-        if (!restarting) {
-            sequentialInputController.stop()
-            sequentialInputMode = false
-        }
         super.onStartInput(attribute, restarting)
+        // Restore only for the exact same app + field identity. A different editor invalidates
+        // the checkpoint so remaining clipboard text can never spill into another app.
+        sequentialInputMode = sequentialInputController.onEditorStarted(attribute, restarting)
         editorStartedAt = android.os.SystemClock.uptimeMillis()
         val preview = KeyboardPanelLaunch.isPreview(attribute, packageName)
         val requestedTool = if (preview) KeyboardPanelLaunch.editorPanel(attribute) else null
