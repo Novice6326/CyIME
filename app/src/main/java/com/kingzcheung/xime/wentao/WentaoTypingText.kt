@@ -55,7 +55,8 @@ object WentaoTypingText {
             codePoint in 0xE0100..0xE01EF ||
             codePoint in 0x1F3FB..0x1F3FF ||
             codePoint in 0xE0020..0xE007F ||
-            codePoint == ZERO_WIDTH_NON_JOINER
+            codePoint == ZERO_WIDTH_NON_JOINER ||
+            codePoint == ZERO_WIDTH_JOINER
     }
 
 
