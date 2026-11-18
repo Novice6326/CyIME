@@ -29,25 +29,25 @@ data class WentaoTypingProfile private constructor(
         return (intervalNanos * (1.0 + factor)).toLong().coerceAtLeast(MIN_INTERVAL_NANOS)
     }
 
+    enum class Preset(
+        val title: String,
+        val charactersPerHour: Long
+    ) {
+        LEVEL_1("1档 · 6000字/小时", 6_000L),
+        LEVEL_2("2档 · 9000字/小时", 9_000L),
+        LEVEL_3("3档 · 12000字/小时", 12_000L),
+        LEVEL_4("4档 · 15000字/小时", 15_000L),
+        LEVEL_5("5档 · 18000字/小时", 18_000L),
+        LEVEL_6("6档 · 21000字/小时", 21_000L),
+        LEVEL_7("7档 · 24000字/小时", 24_000L),
+        LEVEL_8("8档 · 27000字/小时", 27_000L),
+        LEVEL_9("9档 · 30000字/小时", 30_000L)
+    }
+
     companion object {
         private const val NANOS_PER_HOUR = 3_600_000_000_000L
         private const val NANOS_PER_MILLI = 1_000_000.0
         private const val MIN_INTERVAL_NANOS = 1_000_000L
-
-        enum class Preset(
-            val title: String,
-            val charactersPerHour: Long
-        ) {
-            LEVEL_1("1档 · 6000字/小时", 6_000L),
-            LEVEL_2("2档 · 9000字/小时", 9_000L),
-            LEVEL_3("3档 · 12000字/小时", 12_000L),
-            LEVEL_4("4档 · 15000字/小时", 15_000L),
-            LEVEL_5("5档 · 18000字/小时", 18_000L),
-            LEVEL_6("6档 · 21000字/小时", 21_000L),
-            LEVEL_7("7档 · 24000字/小时", 24_000L),
-            LEVEL_8("8档 · 27000字/小时", 27_000L),
-            LEVEL_9("9档 · 30000字/小时", 30_000L)
-        }
 
         fun preset(preset: Preset): WentaoTypingProfile =
             WentaoTypingProfile(preset.title, preset.charactersPerHour, false)
