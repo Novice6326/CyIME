@@ -232,3 +232,14 @@
 - 修正 GB11：ZWJ 后只有 Extended_Pictographic 才能继续 emoji ZWJ 序列；普通字符不会因前一个字符是 ZWJ 而被错误合并。常见 Extended_Pictographic 区间仍是精简近似，未导入完整 emoji-data 属性表。
 - 断点恢复进一步收紧：只有 restarting=true、有效正数 fieldId 和完整 EditorInfo 指纹匹配才恢复，且恢复后暂停；普通新输入会话清除断点。进程被杀后未必收到同编辑器 restart，因此不承诺跨进程无条件恢复。
 - 依据 Unicode 18.0.0 官方 UAX #29、GraphemeBreakProperty.txt 和 DerivedCoreProperties.txt；官方完整 GraphemeBreakTest.txt 尚未集成，不能宣称全量一致性。
+
+
+### 第七轮补充：对照 Unicode 18.0 官方属性表细化 GB9b / GB9c
+
+本轮继续读取 Unicode 18.0.0 官方文件，而不是只凭脚本区段猜测：
+- GraphemeBreakProperty.txt 的 Prepend 属性总计 27 个码点；实现现已补入 U+113D1，并删除误加的 U+13430..U+1343F（官方属性为 Control）。
+- DerivedCoreProperties.txt 明确列出 InCB=Linker（23 个码点）与 InCB=Consonant（913 个码点）。实现已将辅音识别从“脚本区段 + Character.isLetter”收紧为官方 InCB=Consonant 区间二分查找；Linker 清单与官方列出的 23 个码点一致。
+- 官方 InCB=Extend 包含 U+200D ZERO WIDTH JOINER，因此加入该码点的 GB9c 扫描处理，并新增“辅音 + virama + ZWJ + 辅音”测试。
+- 新增反向测试：独立元音不能仅因位于 Indic 区段就被误认成 GB9c 的 LinkingConsonant。
+- UAX #29 GB11 要求 Extended_Pictographic Extend* ZWJ × Extended_Pictographic；实现不再无条件把 ZWJ 后任意字符合并，普通字母测试已覆盖。当前 Extended_Pictographic 是精简范围表，并非官方 emoji-data.txt 的完整属性表。
+- 参考文件：Unicode 18.0.0 GraphemeBreakProperty.txt、DerivedCoreProperties.txt、emoji-data.txt、UAX #29。官方完整 GraphemeBreakTest.txt 仍未集成，不能声称完整符合 UAX #29。
