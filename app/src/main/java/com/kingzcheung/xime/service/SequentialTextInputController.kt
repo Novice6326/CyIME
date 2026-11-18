@@ -22,6 +22,17 @@ internal object SequentialEditorPolicy {
         restarting && fieldIdStable && editorMatches
 }
 
+/** Converts a positive nanosecond interval to Handler's millisecond delay without truncation. */
+internal object SequentialDelayPolicy {
+    private const val NANOS_PER_MILLI = 1_000_000L
+
+    fun toDelayMillis(delayNanos: Long): Long {
+        require(delayNanos >= 0L) { "delayNanos must not be negative" }
+        if (delayNanos == 0L) return 0L
+        return 1L + (delayNanos - 1L) / NANOS_PER_MILLI
+    }
+}
+
 data class SequentialInputProgress(
     val committed: Int = 0,
     val total: Int = 0,
@@ -104,7 +115,7 @@ internal class SequentialTextInputController(
             } else {
                 val jitter = if (randomIntervals) Random.nextDouble(-0.25, 0.25) else 0.0
                 val delayNanos = WentaoTypingPacing.nextDelayNanos(unit, profile, jitter)
-                val delayMs = ((delayNanos + NANOS_PER_MILLI - 1L) / NANOS_PER_MILLI).coerceAtLeast(1L)
+                val delayMs = SequentialDelayPolicy.toDelayMillis(delayNanos).coerceAtLeast(1L)
                 if (!handler.postDelayed(this, delayMs)) {
                     pause()
                     onFinished(false)
@@ -394,7 +405,6 @@ internal class SequentialTextInputController(
     }
 
     companion object {
-        private const val NANOS_PER_MILLI = 1_000_000L
         private const val MAX_TEXT_LENGTH = 262_144
         private const val KEY_TEXT = "text"
         private const val KEY_INDEX = "index"
