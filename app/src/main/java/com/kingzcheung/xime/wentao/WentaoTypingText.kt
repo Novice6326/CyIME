@@ -119,13 +119,13 @@ object WentaoTypingText {
             codePoint == 0x110BD ||
             codePoint == 0x110CD ||
             codePoint in 0x111C2..0x111C3 ||
+            codePoint == 0x113D1 ||
             codePoint == 0x1193F ||
             codePoint == 0x11941 ||
             codePoint == 0x11A3A ||
             codePoint in 0x11A84..0x11A89 ||
             codePoint == 0x11D46 ||
-            codePoint == 0x11F02 ||
-            codePoint in 0x13430..0x1343F
+            codePoint == 0x11F02
 
     /**
      * Approximation of GB9c for common Indic conjuncts. The linker set follows the
