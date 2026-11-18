@@ -58,6 +58,18 @@ class WentaoTypingTextTest {
     }
 
     @Test
+    fun zwnjDoesNotActAsUnicode18IndicConjunctExtender() {
+        assertEquals(
+            listOf("ᳵ‌", "ক"),
+            WentaoTypingText.splitCharacters("ᳵ‌ক")
+        )
+        assertEquals(
+            listOf("ᳶ‌", "প"),
+            WentaoTypingText.splitCharacters("ᳶ‌প")
+        )
+    }
+
+    @Test
     fun keepsIndicConjunctWithViramaAndZwjTogether() {
         assertEquals(
             listOf("क्‍ष"),
