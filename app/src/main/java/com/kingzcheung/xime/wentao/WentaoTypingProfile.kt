@@ -14,7 +14,7 @@ data class WentaoTypingProfile private constructor(
 ) {
     /** 理想平均间隔，单位纳秒。 */
     val intervalNanos: Long
-        get() = NANOS_PER_HOUR / charactersPerHour
+        get() = (NANOS_PER_HOUR / charactersPerHour).coerceAtLeast(MIN_INTERVAL_NANOS)
 
     /** 理想平均间隔，单位毫秒；仅用于 UI 展示。 */
     val intervalMillis: Double
@@ -70,7 +70,7 @@ data class WentaoTypingProfile private constructor(
 /** 标点停顿规则：对标点之后的下一次调度增加间隔。 */
 object WentaoTypingPacing {
     fun punctuationMultiplier(character: String): Int = when {
-        character.any { it == '\\n' || it == '\\r' } -> 5
+        character.any { it == '\n' || it == '\r' } -> 5
         character.any { it in "。！？.!?…" } -> 4
         character.any { it in "；;：:" } -> 3
         character.any { it in "，、," } -> 2
