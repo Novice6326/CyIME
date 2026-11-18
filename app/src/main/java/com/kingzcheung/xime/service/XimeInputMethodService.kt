@@ -3818,8 +3818,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         endGlidePreview()
         super.onStartInput(attribute, restarting)
-        // Restore only for the exact same app + field identity. A different editor invalidates
-        // the checkpoint so remaining clipboard text can never spill into another app.
+        // Keep/restore only when Android explicitly reports a restart of the same editor
+        // and the saved EditorInfo fingerprint matches. Ordinary new sessions invalidate it.
         sequentialInputMode = sequentialInputController.onEditorStarted(attribute, restarting)
         editorStartedAt = android.os.SystemClock.uptimeMillis()
         val preview = KeyboardPanelLaunch.isPreview(attribute, packageName)
