@@ -82,6 +82,14 @@ class WentaoTypingTextTest {
     }
 
     @Test
+    fun keepsCrLfTogetherButDoesNotAttachFollowingExtendToLineFeed() {
+        assertEquals(
+            listOf("\r\n", "́"),
+            WentaoTypingText.splitCharacters("\r\ń")
+        )
+    }
+
+    @Test
     fun controlCharactersForceGraphemeBoundariesBeforeExtend() {
         assertEquals(
             listOf("\u0000", "́", "A"),
