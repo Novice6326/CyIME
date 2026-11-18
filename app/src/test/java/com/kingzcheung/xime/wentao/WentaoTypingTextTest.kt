@@ -34,6 +34,30 @@ class WentaoTypingTextTest {
     }
 
     @Test
+    fun keepsIndicConjunctSequencesTogether() {
+        assertEquals(
+            listOf("क्ष", "क़", "தமிழ்"),
+            WentaoTypingText.splitCharacters("क्षक़தமிழ்")
+        )
+    }
+
+    @Test
+    fun keepsPrependCharactersWithTheirFollowingText() {
+        assertEquals(
+            listOf("\u0600A", "B"),
+            WentaoTypingText.splitCharacters("\u0600AB")
+        )
+    }
+
+    @Test
+    fun keepsZeroWidthNonJoinerWithThePrecedingCluster() {
+        assertEquals(
+            listOf("क\u200C", "ष"),
+            WentaoTypingText.splitCharacters("क\u200Cष")
+        )
+    }
+
+    @Test
     fun handlesEmptyText() {
         assertEquals(emptyList<String>(), WentaoTypingText.splitCharacters(""))
     }
