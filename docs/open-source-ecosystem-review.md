@@ -243,3 +243,11 @@
 - 新增反向测试：独立元音不能仅因位于 Indic 区段就被误认成 GB9c 的 LinkingConsonant。
 - UAX #29 GB11 要求 Extended_Pictographic Extend* ZWJ × Extended_Pictographic；实现不再无条件把 ZWJ 后任意字符合并，普通字母测试已覆盖。当前 Extended_Pictographic 是精简范围表，并非官方 emoji-data.txt 的完整属性表。
 - 参考文件：Unicode 18.0.0 GraphemeBreakProperty.txt、DerivedCoreProperties.txt、emoji-data.txt、UAX #29。官方完整 GraphemeBreakTest.txt 仍未集成，不能声称完整符合 UAX #29。
+
+
+### 第八轮补充：Grapheme Control 优先级
+
+- 对照 GraphemeBreakProperty.txt 增加 Unicode 18.0 GCB=Control 范围识别。
+- 按 UAX #29 规则优先级处理 GB3 与 GB4/GB5：CRLF 保持为一个输入单位；CR/LF 及其他 Control 前后强制断开，不再让组合标记错误附着到控制字符上。
+- 新增 CRLF 后接组合标记、NUL 后接组合标记、埃及象形文字控制字符等回归测试。
+- 仍未导入完整官方 GraphemeBreakTest.txt，Extended_Pictographic 数据也仍是精简近似，因此当前仅能描述为针对已覆盖规则的增强实现，不能标记为 UAX #29 全量合规。
