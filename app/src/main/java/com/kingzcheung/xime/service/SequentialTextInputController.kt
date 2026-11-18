@@ -214,16 +214,10 @@ internal class SequentialTextInputController(
             }
             stop()
         }
-        // A persisted EditorInfo fingerprint is not a globally unique view handle.
-        // Never restore it on an ordinary new input session, even if its fields match.
-        if (!restarting) {
-            clearCheckpoint()
-            return false
-        }
-        return restoreFor(editor)
+        return restoreFor(editor, restarting)
     }
 
-    private fun restoreFor(editor: EditorInfo): Boolean {
+    private fun restoreFor(editor: EditorInfo, restarting: Boolean): Boolean {
         val text = checkpoint.getString(KEY_TEXT, null).orEmpty()
         val savedTarget = EditorTarget(
             packageName = checkpoint.getString(KEY_PACKAGE, "").orEmpty(),
@@ -242,7 +236,7 @@ internal class SequentialTextInputController(
         if (text.isEmpty() || text.length > MAX_TEXT_LENGTH || split.isEmpty() ||
             index !in 0 until split.size ||
             !SequentialEditorPolicy.shouldRestoreCheckpoint(
-                restarting = true,
+                restarting = restarting,
                 fieldIdStable = savedTarget.isStableForRecovery,
                 editorMatches = savedTarget.matches(editor)
             )) {
