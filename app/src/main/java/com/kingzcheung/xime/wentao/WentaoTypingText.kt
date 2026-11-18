@@ -3,8 +3,8 @@ package com.kingzcheung.xime.wentao
 /**
  * 将剪贴板文本拆成用户感知字符（扩展字素簇），而不是 UTF-16 code unit。
  * 中文、代理对 emoji、组合音标、肤色修饰符、ZWJ emoji、国旗、CRLF、
- * Hangul Jamo、常见 Indic conjunct 和 Prepend 序列尽量保持为完整输入单位。
- * 这是轻量实现，不宣称完整符合 Unicode UAX #29。
+ * Hangul Jamo、Indic conjunct 和 Prepend 序列尽量保持为完整输入单位。
+ * 核心 GCB 属性采用 Unicode 18.0 数据；Indic_Conjunct_Break 规则仍需通过官方完整测试集验收。
  */
 object WentaoTypingText {
     fun splitCharacters(text: String): List<String> {
@@ -68,25 +68,6 @@ object WentaoTypingText {
      * GB11: only an Extended_Pictographic character may continue an emoji ZWJ sequence.
      * ZWJ itself is already attached by GB9; this check prevents arbitrary text after ZWJ
      * from being swallowed into the same typing unit.
-     */
-    private fun isEmojiZwjContinuation(cluster: StringBuilder, current: Int): Boolean {
-        if (!isExtendedPictographic(current) || cluster.isEmpty()) return false
-        var offset = cluster.length
-        val joiner = Character.codePointBefore(cluster, offset)
-        if (joiner != ZERO_WIDTH_JOINER) return false
-        offset -= Character.charCount(joiner)
-        while (offset > 0) {
-            val codePoint = Character.codePointBefore(cluster, offset)
-            offset -= Character.charCount(codePoint)
-            if (isExtend(codePoint)) continue
-            return isExtendedPictographic(codePoint)
-        }
-        return false
-    }
-
-    /**
-     * Compact Extended_Pictographic ranges used for common emoji blocks and legacy symbols.
-     * The official Unicode emoji-data.txt remains the source of truth for full conformance.
      */
     private fun isEmojiZwjContinuation(cluster: StringBuilder, current: Int): Boolean {
         if (!isExtendedPictographic(current) || cluster.isEmpty()) return false
