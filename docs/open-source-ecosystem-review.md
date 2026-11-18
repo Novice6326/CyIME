@@ -251,3 +251,15 @@
 - 按 UAX #29 规则优先级处理 GB3 与 GB4/GB5：CRLF 保持为一个输入单位；CR/LF 及其他 Control 前后强制断开，不再让组合标记错误附着到控制字符上。
 - 新增 CRLF 后接组合标记、NUL 后接组合标记、埃及象形文字控制字符等回归测试。
 - 仍未导入完整官方 GraphemeBreakTest.txt，Extended_Pictographic 数据也仍是精简近似，因此当前仅能描述为针对已覆盖规则的增强实现，不能标记为 UAX #29 全量合规。
+
+
+### 第九轮补充：YuyanIme / yuyansdk 手写与九键源码对照
+
+已检查上游 YuyanIme 的 README、.gitmodules，以及 yuyansdk 的手写识别、分割、图像预处理、CTC 解码和九键容器源码。
+
+观察结果：
+- yuyansdk 的手写识别采用独立 RecEngine：先做整行识别，再根据置信度与笔画分组结果决定是否运行逐字识别，最后合并候选；它还包含 StrokeSegmenter、ImagePreprocessor 和 CTC beam decoder。这是可供对照的算法方案。
+- 当前 CyIME 已有独立 :inference 进程、OCHWPro ONNX 手写模型和个人模型替换能力。直接移植另一套模型运行时会增加模型体积、内存、线程和维护成本，暂不移植；后续应以同一批手写样本对比 Top-1/Top-5、整行准确率、首候选延迟、内存峰值，再决定是否吸收分割或候选融合算法。
+- yuyansdk 的 T9TextContainer 依赖旧式 View / RecyclerView / Rime DictDecoder。当前工程已具备 Rime 九键与独立 Compose 键盘，不移植整个容器；只将其九键候选侧栏和符号交互作为体验对照。
+- 上游 yuyansdk 根目录 LICENSE 为 BSD 3-Clause 条款；但 src/main/assets/hw/rec.nb（约 16.7 MB）模型权重和 ocrv5.txt 字典的单独来源、许可与再分发权尚未得到独立证明。源代码许可证不能自动覆盖模型和数据，因此不复制这些二进制资源。
+- 上游项目引用的代码与资源必须按固定 commit 审查，不能跟随 master 自动更新。
