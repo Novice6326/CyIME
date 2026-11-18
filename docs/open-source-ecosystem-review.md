@@ -76,3 +76,76 @@
 ## 本轮已完成的调查
 
 已检查主要候选项目的 README 和顶层 LICENSE：YuyanIme、Feelime、Fcitx5 Android、HeliBoard、sherpa-onnx、rime-ice、OpenCC、FlorisBoard。手写模型 Ismantic/Handwritten 仅作为候选，许可仍待人工核验。下一步应先做代码结构和依赖级别的差异审计，再逐项落地，不应一次性把所有仓库合并。
+
+
+---
+
+## 第二轮：对当前开发分支进行源码级差异审计（2026-11-18）
+
+本轮检查了当前分支的 Gradle 依赖、资源目录、语音模型目录、Rime 词库 NOTICE、手写服务实现及键盘布局实现。结论修正第一轮的初步判断：多项“候选项目”对应的能力已经在当前工程中存在，不能再按“缺失功能”直接引入。
+
+### 当前工程已经具备的能力（不重复移植）
+
+| 能力 | 当前工程证据 | 决策 |
+|---|---|---|
+| Rime + 雾凇拼音 | `app/src/main/assets/rime_chinese/NOTICE.md` 明确记录固定上游提交 `9e66b0729083b37d217312294f6d516c8d7234be`；`tasks-chinese.gradle.kts` 负责构建接入 | 已集成。以后只做词库版本比较、差异词条评测，不再重复拷贝 |
+| sherpa-onnx | `tasks-speech.gradle.kts` 固定 1.13.8 AAR 与 SHA-256；已有本地模型管理、VAD、流式识别 | 已集成。升级前必须做 JNI/API 兼容和模型回归 |
+| 中文语音二次定稿 | `SpeechModelSelection`、`SherpaSpeechEngine`、`SecondPassGate` 已实现流式预览、SenseVoice/X-ASR 定稿及候选保护 | 已有成熟方案。Feelime 的双遍架构可作对照，不应直接覆盖 |
+| 语音模型完整性 | `SpeechModelCatalog` 固定模型 URL、版本、文件 SHA-256 和下载镜像 | 已有校验；评估外部 ModelStore 时重点比较原子安装、损坏恢复和来源切换 |
+| 手写识别 | `HandwritingEngine` 通过独立 `:inference` 进程加载 OCHWPro ONNX 模型，支持个人模型替换；有字表与笔画处理代码 | 已有端侧实现。Ismantic 模型只作离线基准，不直接替换 |
+| 悬浮键盘 | `FloatingKeyboardContainer`、拖动/缩放/停靠状态机及多项 UI/设备测试 | 已有实现。只对照 Yuyan 的体验细节，不整套移植 |
+| 主题 | `KeyboardPalette`、`ThemeSettingsScreen` 及主题测试 | 已有实现。FlorisBoard 只作视觉/主题结构参考 |
+| Emoji/剪贴板 | Emoji 面板、剪贴板面板及导航测试已存在 | 不引入重复面板 |
+| 插件 | 当前工程有 ExtensionManager、插件市场、ASR 后端适配和插件服务 | 已有插件体系。Fcitx5 只对照扩展隔离和生命周期，不移植整套框架 |
+
+### 外部项目的实际增量价值
+
+#### Feelime（当前优先级：高，限语音算法和键盘桥接审计）
+
+已核对 Feelime 上游提交：`972757a6667fe795e80db2aff2e4bc48cc1e142b`（2026-11-17）。
+
+可重点比较：
+- 两遍识别：流式 Zipformer 先给预览，停顿后 Paraformer 整句重解码。
+- 语音文本后处理：中文标点、英文大小写与缩写恢复。
+- HTML/CSS/JS 键盘经 token-gated JS Bridge 调用 Android InputConnection 的安全边界。
+- 模型按需下载、校验后安装、来源切换和损坏恢复。
+
+当前工程已有流式预览 + SenseVoice/X-ASR 定稿和 SecondPassGate 语言模型保护。下一步应拿同一套中文/中英混输音频集做 CER、标点准确率、首字延迟、停顿定稿耗时和内存比较；只有 Feelime 在具体指标上胜出，才移植其独立后处理算法。不能仅凭“二次识别”概念判断其优于现有方案。
+
+上游： https://github.com/feelime/feelime
+
+#### 语燕 YuyanIme（当前优先级：中高，限键盘体验和手写对照）
+
+上游 Gitee 发布页显示最新标签 v20261105.22，发布于 2026-11-06；更新涉及物理键盘候选栏、九键/中英混输控制、手写引擎和键盘菜单编辑等。其公开发布说明标注 BSD-3-Clause，但此前 GitHub 搜索出现的是镜像/个人 fork，后续移植必须以官方上游源代码与该发布包对应的 tag 为准，不能把 fork 当作官方版本。
+
+可重点比较：九键候选排序、手写笔迹处理、键盘切换稳定性、符号侧栏、主题和设置交互。当前工程已具备悬浮/主题/剪贴板/Emoji 等基础能力，只移植经 A/B 测试证明更好的独立模块。
+
+上游发布页：https://gitee.com/gurecn/YuyanIme/releases
+
+#### Fcitx5 Android（当前优先级：中，限插件架构）
+
+已具备自己的插件体系，不需要引入第二套 IME 服务和键盘 UI。只比较插件生命周期、外部引擎隔离、配置导入导出及物理键盘支持；若当前实现已经满足需求，不做代码移植。
+
+上游：https://github.com/fcitx5-android/fcitx5-android
+
+#### HeliBoard / FlorisBoard（当前优先级：中低，限局部交互）
+
+当前工程已经有 Compose 键盘和主题系统。只参考英文拼写/词典建议、Emoji 搜索、无障碍语义、主题 token 和键盘尺寸管理。避免移植整套前端。
+
+### 本轮关键风险发现
+
+1. 当前工程的 sherpa-onnx AAR 是 1.13.8，而上游 Feelime 的语音实现也依赖 sherpa-onnx。不能把两个 AAR 或 ONNX Runtime 重复打包；任何升级要统一 runtime 版本并检查所有 JNI ABI。
+2. 当前 Rime 中文 NOTICE 已固定雾凇上游提交。外部词库只能通过受控的生成脚本接入，并保留上游 LICENSE、NOTICE 和源版本；不能手工覆盖用户词库或 schema。
+3. 当前手写模型通过独立 inference 进程隔离，换模型需验证 IPC 协议、字表映射、内存峰值、冷启动和进程回收恢复。不能只比较单字 Top-1。
+4. 当前键盘使用 Compose 组件与状态机。Feelime 的 WebView/JS Bridge 与 Compose 是不同前端架构；不把两套键盘前端混合运行。
+5. 上游项目更新频繁，必须固定 commit/tag 和 SHA-256，不能直接追踪 main/master 并在用户构建时下载不固定内容。
+
+### 下一步可执行工作
+
+1. 建立 Feelime 与当前语音实现的统一评测样本集和指标脚本；优先对比整句纠错、标点、英文缩写、静音切分和低音量识别。
+2. 对照 YuyanIme 官方 v20261105.22 源码，做九键候选、手写、符号面板、物理键盘的逐项差异清单。
+3. 检查当前手写模型的模型卡、训练数据和授权，再决定是否用 Ismantic 作为 benchmark；在授权核验前不合并。
+4. 审计当前 IME 的所有语音/逐字输入路径是否始终通过当前 InputConnection，并对跨应用、焦点变化、密码框、权限拒绝和服务不可用做测试。
+5. 完成上述差异评测后再挑选性移植，禁止为了“用了更多开源项目”而增加依赖。
+
+本轮没有将外部项目代码直接复制进主工程，因为源码审计发现多数能力已经存在；这是有意避免重复架构和依赖冲突，不代表停止整合开源项目。
