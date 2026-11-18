@@ -119,6 +119,8 @@ object WentaoTypingText {
         codePoint in 0x0000..0x0009 ||
             codePoint in 0x000B..0x000C ||
             codePoint in 0x000E..0x001F ||
+            codePoint == CARRIAGE_RETURN ||
+            codePoint == LINE_FEED ||
             codePoint in 0x007F..0x009F ||
             codePoint == 0x00AD ||
             codePoint == 0x061C ||
@@ -157,9 +159,9 @@ object WentaoTypingText {
             codePoint == 0x11F02
 
     /**
-     * Approximation of GB9c for common Indic conjuncts. The linker set follows the
-     * Unicode Indic_Conjunct_Break Linker property; consonant detection is deliberately
-     * limited to letter code points in Indic-script blocks.
+     * Approximation of GB9c for common Indic conjuncts. Linker and consonant properties
+     * use the Unicode 18.0 Indic_Conjunct_Break code point lists; Extend is approximated
+     * using the general grapheme Extend predicate plus ZWJ.
      */
     private fun isIndicConjunctContinuation(cluster: StringBuilder, current: Int): Boolean {
         if (!isIndicConsonant(current)) return false
