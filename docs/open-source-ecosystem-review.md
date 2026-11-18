@@ -193,3 +193,18 @@
 #### 构建与 CI 现状
 
 当前分支有 `.github/workflows/build.yml`（push 到 main/dev* 会触发构建）和 `.github/workflows/test.yml`（手动触发完整单测，可选 instrumentation）。但查询当前分支 Actions runs 未返回任何运行记录，因此本轮不能报告 Gradle 构建或测试通过。build.yml 中单元测试步骤当前设置为 `continue-on-error: true`，即使失败也不会阻断后续 APK 构建；完整验证应以 test.yml 的单测结果和可选设备测试结果为准。
+
+
+### 第四轮补充：Unicode 18.0 字素边界审计（2026-11-18）
+
+本轮依据 Unicode Consortium 的 UAX #29 与 Unicode 18.0.0 DerivedCoreProperties 数据核对扩展字素簇规则。UAX #29 明确区分 legacy 与 extended grapheme clusters；一般文本处理推荐 extended 规则，其中包含 GB9a（SpacingMark）、GB9b（Prepend）和 GB9c（Indic conjunct）。参考：
+- https://www.unicode.org/reports/tr29/
+- https://www.unicode.org/Public/18.0.0/ucd/DerivedCoreProperties.txt
+
+已在 WentaoTypingText 中补充：
+- GB9b 常见 Prepend 代码点范围。
+- GB9c 常见 Indic conjunct 连写：按 Unicode InCB Linker 代码点清单识别 linker，再结合 Indic 脚本字母范围近似判断前后辅音。
+- 将 ZWNJ 纳入 Extend 处理。
+- 对 Hangul、Indic conjunct、Prepend、ZWNJ 增加回归用例；并保留 Emoji、组合音标、CRLF 测试。
+
+边界声明：当前仍是轻量级近似实现。Indic consonant 判定使用脚本区段和字母类别，不是完整 Unicode InCB 属性表；Prepend 范围也需要持续与 UCD 对照。尚未导入官方 GraphemeBreakTest.txt 做全量一致性测试，因此不能称为完整 UAX #29 合规。当前 Android 工程编译、Gradle 单测与真机测试仍未获得通过证据。
