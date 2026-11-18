@@ -2,8 +2,9 @@ package com.kingzcheung.xime.wentao
 
 /**
  * 将剪贴板文本拆成用户感知字符（扩展字素簇），而不是 UTF-16 code unit。
- * 中文、代理对 emoji、组合音标、肤色修饰符、ZWJ 家庭 emoji、国旗和 CRLF
- * 均不得在中间断开。
+ * 中文、代理对 emoji、组合音标、肤色修饰符、ZWJ emoji、国旗、CRLF、
+ * Hangul Jamo、常见 Indic conjunct 和 Prepend 序列尽量保持为完整输入单位。
+ * 这是轻量实现，不宣称完整符合 Unicode UAX #29。
  */
 object WentaoTypingText {
     fun splitCharacters(text: String): List<String> {
