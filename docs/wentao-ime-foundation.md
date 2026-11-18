@@ -60,3 +60,14 @@ CyIME 上游采用 GPL-3.0。基于该代码分发的文涛输入法版本必须
 - [x] 普通新输入会话不恢复磁盘断点，即使 packageName、fieldId、inputType 等字段碰巧相同也清除，避免跨输入框误续写。
 - [x] 恢复后仍处于暂停状态，必须由用户手动继续。
 - [ ] 因安全优先，进程被系统杀死后若 Android 未报告同一编辑器重启，断点可能被丢弃；不承诺跨进程、跨应用页面的无条件恢复。后续若要支持，需要单独设计带目标信息展示和用户二次确认的恢复流程。
+
+
+## Unicode 18.0 控制字符边界补充（2026-11-18）
+
+- [x] 增加 GCB=Control 属性识别，并遵守 GB3 优先级：CRLF 仍作为一个单位。
+- [x] 遵守 GB4/GB5：CR、LF 和其他 Control 字符前后强制断开，组合标记不能错误附着在控制字符后。
+- [x] Prepend 属性与 Unicode 18.0 GraphemeBreakProperty.txt 的 27 个码点核对。
+- [x] Indic InCB=Consonant 使用 Unicode 18.0 DerivedCoreProperties.txt 的精确区间；InCB=Linker 清单与官方 23 个码点核对。
+- [x] 增加 ZWJ 后任意普通字母不能被误并入 Emoji ZWJ 序列的测试。
+- [ ] Extended_Pictographic 仍为精简范围表，完整 emoji-data.txt 属性和官方 GraphemeBreakTest.txt 全量一致性尚未完成。
+- [ ] Android Gradle 单测、Instrumentation 和多应用真机测试尚未获得通过记录。
