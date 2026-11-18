@@ -1475,6 +1475,16 @@ fun KeyboardView(
                     }
                 }
             }
+            callbacks.sequentialInputProgressText?.value?.takeIf { it.isNotBlank() }?.let { progressText ->
+                Text(
+                    text = progressText,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp)
+                        .testTag("sequential-input-progress"),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = candidateTextColor,
+                    maxLines = 1,
+                )
+            }
             androidx.compose.runtime.CompositionLocalProvider(
                 LocalCorrectedCandidates provides correctionMarks,
                 LocalSentenceSelection provides sentenceDragOwner,
