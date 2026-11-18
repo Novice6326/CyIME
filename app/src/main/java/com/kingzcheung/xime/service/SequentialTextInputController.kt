@@ -105,7 +105,10 @@ internal class SequentialTextInputController(
                 val jitter = if (randomIntervals) Random.nextDouble(-0.25, 0.25) else 0.0
                 val delayNanos = WentaoTypingPacing.nextDelayNanos(unit, profile, jitter)
                 val delayMs = ((delayNanos + NANOS_PER_MILLI - 1L) / NANOS_PER_MILLI).coerceAtLeast(1L)
-                handler.postDelayed(this, delayMs)
+                if (!handler.postDelayed(this, delayMs)) {
+                    pause()
+                    onFinished(false)
+                }
             }
         }
     }
@@ -160,7 +163,10 @@ internal class SequentialTextInputController(
         paused = false
         saveCheckpoint()
         onProgress(0, units.size, true)
-        handler.post(tick)
+        if (!handler.post(tick)) {
+            pause()
+            onFinished(false)
+        }
     }
 
     fun pause() {
@@ -183,7 +189,10 @@ internal class SequentialTextInputController(
         paused = false
         saveCheckpoint()
         onProgress(nextIndex, units.size, true)
-        handler.post(tick)
+        if (!handler.post(tick)) {
+            pause()
+            onFinished(false)
+        }
     }
 
     fun stop() {
