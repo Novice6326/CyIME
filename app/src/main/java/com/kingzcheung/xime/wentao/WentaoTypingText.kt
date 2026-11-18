@@ -20,7 +20,7 @@ object WentaoTypingText {
             val attach = cluster.isNotEmpty() && (
                 isExtend(codePoint) ||
                     codePoint == ZERO_WIDTH_JOINER ||
-                    previousCodePoint == ZERO_WIDTH_JOINER ||
+                    isEmojiZwjContinuation(cluster, codePoint) ||
                     isPrepend(previousCodePoint) ||
                     isIndicConjunctContinuation(cluster, codePoint) ||
                     isHangulContinuation(previousCodePoint, codePoint) ||
@@ -58,6 +58,55 @@ object WentaoTypingText {
             codePoint == ZERO_WIDTH_NON_JOINER
     }
 
+
+
+    /**
+     * GB11: only an Extended_Pictographic character may continue an emoji ZWJ sequence.
+     * ZWJ itself is already attached by GB9; this check prevents arbitrary text after ZWJ
+     * from being swallowed into the same typing unit.
+     */
+    private fun isEmojiZwjContinuation(cluster: StringBuilder, current: Int): Boolean {
+        if (!isExtendedPictographic(current) || cluster.isEmpty()) return false
+        var offset = cluster.length
+        val joiner = Character.codePointBefore(cluster, offset)
+        if (joiner != ZERO_WIDTH_JOINER) return false
+        offset -= Character.charCount(joiner)
+        while (offset > 0) {
+            val codePoint = Character.codePointBefore(cluster, offset)
+            offset -= Character.charCount(codePoint)
+            if (isExtend(codePoint)) continue
+            return isExtendedPictographic(codePoint)
+        }
+        return false
+    }
+
+    /**
+     * Compact Extended_Pictographic ranges used for common emoji blocks and legacy symbols.
+     * The official Unicode emoji-data.txt remains the source of truth for full conformance.
+     */
+    private fun isExtendedPictographic(codePoint: Int): Boolean =
+        codePoint in 0x1F000..0x1FAFF ||
+            codePoint in 0x1FC00..0x1FFFD ||
+            codePoint in 0x2600..0x27BF ||
+            codePoint in 0x2300..0x23FF ||
+            codePoint in 0x2B00..0x2BFF ||
+            codePoint in 0x00A9..0x00AE ||
+            codePoint == 0x203C || codePoint == 0x2049 ||
+            codePoint == 0x2122 || codePoint == 0x2139 ||
+            codePoint in 0x2194..0x2199 ||
+            codePoint in 0x21A9..0x21AA ||
+            codePoint == 0x2328 || codePoint == 0x2388 ||
+            codePoint == 0x23CF || codePoint == 0x24C2 ||
+            codePoint == 0x25AA || codePoint == 0x25AB ||
+            codePoint == 0x25B6 || codePoint == 0x25C0 ||
+            codePoint in 0x25FB..0x25FE ||
+            codePoint == 0x2934 || codePoint == 0x2935 ||
+            codePoint == 0x2B05 || codePoint == 0x2B06 ||
+            codePoint == 0x2B07 || codePoint == 0x2B1B ||
+            codePoint == 0x2B1C || codePoint == 0x2B50 ||
+            codePoint == 0x2B55 || codePoint == 0x3030 ||
+            codePoint == 0x303D || codePoint == 0x3297 ||
+            codePoint == 0x3299
 
     /** GB9b: a Prepend character remains attached to the following character. */
     private fun isPrepend(codePoint: Int): Boolean =
