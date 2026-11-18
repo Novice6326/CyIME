@@ -88,7 +88,9 @@ object WentaoTypingText {
         Unicode18GraphemeProperties.isExtendedPictographic(codePoint)
 
     private fun isGraphemeControl(codePoint: Int): Boolean =
-        Unicode18GraphemeProperties.isControl(codePoint)
+        codePoint == CARRIAGE_RETURN ||
+            codePoint == LINE_FEED ||
+            Unicode18GraphemeProperties.isControl(codePoint)
 
     private fun isPrepend(codePoint: Int): Boolean =
         Unicode18GraphemeProperties.isPrepend(codePoint)
