@@ -3363,8 +3363,14 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             checkpoint = getSharedPreferences("wentao_sequential_typing", MODE_PRIVATE),
             onProgress = { committed, total, running ->
                 sequentialInputProgressState.value = SequentialInputProgress(committed, total, running)
-                sequentialInputProgressTextState.value =
-                    if (total > 0) "逐字输入：$committed / $total（${committed * 100 / total}%）" else ""
+                sequentialInputProgressTextState.value = if (total > 0) {
+                    val status = when {
+                        committed >= total -> "已完成"
+                        running -> "进行中"
+                        else -> "已暂停"
+                    }
+                    "逐字输入$status：$committed / $total（${committed * 100 / total}%）"
+                } else ""
             },
             onFinished = { success ->
                 android.widget.Toast.makeText(this,
