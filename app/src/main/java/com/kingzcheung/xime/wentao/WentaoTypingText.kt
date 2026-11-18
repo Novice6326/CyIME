@@ -60,7 +60,8 @@ object WentaoTypingText {
         Unicode18GraphemeProperties.isSpacingMark(codePoint)
 
     private fun isIndicExtend(codePoint: Int): Boolean =
-        isExtend(codePoint) || isSpacingMark(codePoint) || codePoint == ZERO_WIDTH_JOINER
+        codePoint != ZERO_WIDTH_NON_JOINER &&
+            (isExtend(codePoint) || isSpacingMark(codePoint) || codePoint == ZERO_WIDTH_JOINER)
 
 
 
