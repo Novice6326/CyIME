@@ -191,9 +191,10 @@ internal class SequentialTextInputController(
         }
         val currentTarget = target
         if (active) {
-            if (currentTarget != null && currentTarget.matches(editor)) {
-                if (restarting && paused) return true
-                if (!restarting && isRunning) pause()
+            // EditorInfo fields can collide across different views in the same app.
+            // Keep an in-memory task only when Android explicitly reports a restart
+            // of the same editor; a normal new input session always invalidates it.
+            if (restarting && currentTarget != null && currentTarget.matches(editor)) {
                 return true
             }
             stop()
