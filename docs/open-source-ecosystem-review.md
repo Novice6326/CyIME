@@ -208,3 +208,17 @@
 - 对 Hangul、Indic conjunct、Prepend、ZWNJ 增加回归用例；并保留 Emoji、组合音标、CRLF 测试。
 
 边界声明：当前仍是轻量级近似实现。Indic consonant 判定使用脚本区段和字母类别，不是完整 Unicode InCB 属性表；Prepend 范围也需要持续与 UCD 对照。尚未导入官方 GraphemeBreakTest.txt 做全量一致性测试，因此不能称为完整 UAX #29 合规。当前 Android 工程编译、Gradle 单测与真机测试仍未获得通过证据。
+
+
+### 第五轮补充：逐字输入目标身份防串写（2026-11-18）
+
+源码审查发现旧的会话保留条件存在边界：不同输入框可能复用相同 packageName、fieldId 和 inputType；旧逻辑在 restarting=false 但 EditorInfo 指纹相同时会暂停并保留任务，之后仍可能被手动恢复到新字段。
+
+已修正：
+- 只有 restarting=true 且完整 EditorInfo 指纹匹配，才保留当前内存任务。
+- 普通新输入会话无条件停止并清除旧任务，不再因 EditorInfo 字段碰巧相同而保留。
+- 持久化指纹增加 imeOptions、privateImeOptions、actionId、actionLabel、hintText 和 label。
+- 跨服务恢复要求 fieldId > 0；无有效 View ID 时拒绝恢复。
+- 新增 SequentialEditorPolicyTest，覆盖“新会话即使指纹相同也不保留”“仅匹配的 restart 保留”“fieldId 必须为正数”。
+
+安全边界：EditorInfo 并非全局唯一的 View 句柄；完整指纹只是降低误匹配概率。正数 fieldId 也可能在不同 Activity/页面复用，因此恢复仍保持暂停，必须由用户手动继续。不同应用和无 ID 编辑器的真机验证尚未完成。
